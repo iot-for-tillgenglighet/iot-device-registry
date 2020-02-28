@@ -1,0 +1,13 @@
+notifications:
+  email: false
+
+language: minimal
+
+services:
+  - docker
+
+before_install:
+  - echo "$DOCKER_PASSWORD" | docker login docker.pkg.github.com -u "$DOCKER_USERNAME" --password-stdin
+  - docker build -f deployments/Dockerfile -t github.com/iot-for-tillgenglighet/iot-device-registry .
+  - docker tag github.com/iot-for-tillgenglighet/iot-device-registry docker.pkg.github.com/iot-for-tillgenglighet/iot-device-registry/iot-device-registry:$TAG_PREFIX$TRAVIS_COMMIT
+  - docker push docker.pkg.github.com/iot-for-tillgenglighet/iot-device-registry/iot-device-registry:$TAG_PREFIX$TRAVIS_COMMIT
