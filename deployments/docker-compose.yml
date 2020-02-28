@@ -1,0 +1,14 @@
+version: '3'
+services:
+  device-registry:
+    image: 'iot-for-tillgenglighet/iot-device-registry:latest'
+    build:
+      context: ..
+      dockerfile: ./deployments/Dockerfile
+    restart: always
+    environment:
+      SERVICE_PORT: '8686'
+    
+    ports:
+      - '8686:8686'
+

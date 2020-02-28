@@ -1,0 +1,22 @@
+
+schema:
+  - api/graphql-spec/schema.graphql
+federation:
+  filename: internal/pkg/graphql/federation.go
+  package: graphql
+exec:
+  filename: internal/pkg/graphql/generated.go
+  package: graphql
+model:
+  filename: internal/pkg/graphql/models_gen.go
+  package: graphql
+resolver:
+  filename: internal/pkg/graphql/resolver.go
+  package: graphql
+  type: Resolver
+autobind: []
+models:
+  Device:
+    fields:
+      name:
+        resolver: true

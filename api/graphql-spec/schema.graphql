@@ -1,0 +1,10 @@
+
+type Device @key(fields: "id") {
+  id: ID!
+  name: String
+}
+
+
+type Query @extends {
+  devices: [Device]!
+}
