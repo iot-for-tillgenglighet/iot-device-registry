@@ -11,5 +11,5 @@ func main() {
 
 	log.Infof("Starting up %s ...", serviceName)
 
-	handler.Router()
+	handler.CreateRouterAndStartServing()
 }
