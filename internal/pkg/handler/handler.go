@@ -125,15 +125,22 @@ func (cs contextSource) ProvidesType(typeName string) bool {
 
 func (cs *contextSource) UpdateEntityAttributes(entityID string, patch ngsi.Patch) error {
 
-	for _, device := range cs.devices {
+	updateSource := &fiware.Device{}
+	err := patch.DecodeBodyInto(updateSource)
+	if err != nil {
+		return err
+	}
+
+	for index, device := range cs.devices {
 		if device.ID == entityID {
+			cs.devices[index].Value.Value = updateSource.Value.Value
 			return nil
 		}
 	}
 
+	// Truncate the leading "urn:ngsi-ld:Device:" from the device id string
 	entityID = entityID[19:]
-
-	cs.devices = append(cs.devices, *fiware.NewDevice(entityID, "value"))
+	cs.devices = append(cs.devices, *fiware.NewDevice(entityID, updateSource.Value.Value))
 
 	return nil
 }
