@@ -67,6 +67,7 @@ func newRequestRouter() *RequestRouter {
 func createRequestRouter(contextRegistry ngsi.ContextRegistry) *RequestRouter {
 	router := newRequestRouter()
 
+	router.addGraphQLHandlers()
 	router.addNGSIHandlers(contextRegistry)
 
 	return router
