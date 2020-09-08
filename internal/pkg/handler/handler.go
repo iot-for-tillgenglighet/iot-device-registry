@@ -4,6 +4,7 @@ import (
 	"compress/flate"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
@@ -16,6 +17,7 @@ import (
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/datamodels/fiware"
 	ngsi "github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/ngsi-ld"
 )
 
@@ -77,7 +79,7 @@ func CreateRouterAndStartServing() {
 
 	contextRegistry := ngsi.NewContextRegistry()
 	ctxSource := contextSource{}
-	contextRegistry.Register(ctxSource)
+	contextRegistry.Register(&ctxSource)
 
 	router := createRequestRouter(contextRegistry)
 
@@ -92,14 +94,25 @@ func CreateRouterAndStartServing() {
 }
 
 type contextSource struct {
+	devices []fiware.Device
 }
 
 func (cs contextSource) ProvidesEntitiesWithMatchingID(entityID string) bool {
-	return false
+	return strings.HasPrefix(entityID, "urn:ngsi-ld:Device:")
 }
 
-func (cs contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntitiesCallback) error {
-	return nil
+func (cs *contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntitiesCallback) error {
+
+	var err error
+
+	for _, device := range cs.devices {
+		err = callback(device)
+		if err != nil {
+			break
+		}
+	}
+
+	return err
 }
 
 func (cs contextSource) ProvidesAttribute(attributeName string) bool {
@@ -110,6 +123,17 @@ func (cs contextSource) ProvidesType(typeName string) bool {
 	return typeName == "Device"
 }
 
-func (cs contextSource) UpdateEntityAttributes(entityID string, patch ngsi.Patch) error {
+func (cs *contextSource) UpdateEntityAttributes(entityID string, patch ngsi.Patch) error {
+
+	for _, device := range cs.devices {
+		if device.ID == entityID {
+			return nil
+		}
+	}
+
+	entityID = entityID[19:]
+
+	cs.devices = append(cs.devices, *fiware.NewDevice(entityID, "value"))
+
 	return nil
 }
