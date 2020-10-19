@@ -3,7 +3,9 @@ package handler
 import (
 	"compress/flate"
 	"net/http"
+	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -13,6 +15,8 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	gql "github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/graphql"
+	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging"
+	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging/telemetry"
 
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
@@ -75,12 +79,21 @@ func createRequestRouter(contextRegistry ngsi.ContextRegistry) *RequestRouter {
 	return router
 }
 
-func CreateRouterAndStartServing() {
+//MessagingContext is an interface that allows mocking of messaging.Context parameters
+type MessagingContext interface {
+	PublishOnTopic(message messaging.TopicMessage) error
+}
 
+func createContextRegistry(messenger MessagingContext) ngsi.ContextRegistry {
 	contextRegistry := ngsi.NewContextRegistry()
-	ctxSource := contextSource{}
+	ctxSource := contextSource{messenger: messenger}
 	contextRegistry.Register(&ctxSource)
+	return contextRegistry
+}
 
+//CreateRouterAndStartServing sets up the NGSI-LD router and starts serving incoming requests
+func CreateRouterAndStartServing(messenger MessagingContext) {
+	contextRegistry := createContextRegistry(messenger)
 	router := createRequestRouter(contextRegistry)
 
 	port := os.Getenv("SERVICE_PORT")
@@ -94,7 +107,8 @@ func CreateRouterAndStartServing() {
 }
 
 type contextSource struct {
-	devices []fiware.Device
+	messenger MessagingContext
+	devices   []fiware.Device
 }
 
 func (cs contextSource) ProvidesEntitiesWithMatchingID(entityID string) bool {
@@ -128,8 +142,14 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, patch ngsi.Patc
 	updateSource := &fiware.Device{}
 	err := patch.DecodeBodyInto(updateSource)
 	if err != nil {
+		log.Errorln("Failed to decode PATCH body in UpdateEntityAttributes: " + err.Error())
 		return err
 	}
+
+	// Truncate the leading "urn:ngsi-ld:Device:" from the device id string
+	shortEntityID := entityID[19:]
+
+	postWaterTempTelemetryIfDeviceIsAWaterTempDevice(cs.messenger, shortEntityID, updateSource.Value.Value)
 
 	for index, device := range cs.devices {
 		if device.ID == entityID {
@@ -138,9 +158,33 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, patch ngsi.Patc
 		}
 	}
 
-	// Truncate the leading "urn:ngsi-ld:Device:" from the device id string
-	entityID = entityID[19:]
-	cs.devices = append(cs.devices, *fiware.NewDevice(entityID, updateSource.Value.Value))
+	cs.devices = append(cs.devices, *fiware.NewDevice(shortEntityID, updateSource.Value.Value))
 
 	return nil
+}
+
+//This is a hack to decode the value and send it as a telemetry message over RabbitMQ for PoC purposes.
+func postWaterTempTelemetryIfDeviceIsAWaterTempDevice(messenger MessagingContext, device, value string) {
+	if strings.Contains(device, "sk-elt-temp-") {
+		decodedValue, err := url.QueryUnescape(value)
+		if err != nil {
+			return
+		}
+
+		values := strings.Split(decodedValue, ";")
+		for _, v := range values {
+			parts := strings.Split(v, "=")
+			if len(parts) == 2 {
+				if parts[0] == "t" {
+					temp, err := strconv.ParseFloat(parts[1], 64)
+					if err == nil {
+						messenger.PublishOnTopic(
+							telemetry.NewWaterTemperatureTelemetry(temp, device, 0.0, 0.0),
+						)
+					}
+					return
+				}
+			}
+		}
+	}
 }

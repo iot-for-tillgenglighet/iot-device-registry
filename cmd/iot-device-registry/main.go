@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/handler"
+	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -11,5 +12,10 @@ func main() {
 
 	log.Infof("Starting up %s ...", serviceName)
 
-	handler.CreateRouterAndStartServing()
+	config := messaging.LoadConfiguration(serviceName)
+	messenger, _ := messaging.Initialize(config)
+
+	defer messenger.Close()
+
+	handler.CreateRouterAndStartServing(messenger)
 }
