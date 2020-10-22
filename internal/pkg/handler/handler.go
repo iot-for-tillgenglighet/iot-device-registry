@@ -41,6 +41,7 @@ func (router *RequestRouter) addGraphQLHandlers() {
 func (router *RequestRouter) addNGSIHandlers(contextRegistry ngsi.ContextRegistry) {
 	router.Get("/ngsi-ld/v1/entities", ngsi.NewQueryEntitiesHandler(contextRegistry))
 	router.Patch("/ngsi-ld/v1/entities/{entity}/attrs/", ngsi.NewUpdateEntityAttributesHandler(contextRegistry))
+	router.Post("/ngsi-ld/v1/entities", ngsi.NewCreateEntityHandler(contextRegistry))
 }
 
 //Get accepts a pattern that should be routed to the handlerFn on a GET request
@@ -51,6 +52,11 @@ func (router *RequestRouter) Get(pattern string, handlerFn http.HandlerFunc) {
 //Patch accepts a pattern that should be routed to the handlerFn on a PATCH request
 func (router *RequestRouter) Patch(pattern string, handlerFn http.HandlerFunc) {
 	router.impl.Patch(pattern, handlerFn)
+}
+
+//Post accepts a pattern that should be routed to the handlerFn on a POST request
+func (router *RequestRouter) Post(pattern string, handlerFn http.HandlerFunc) {
+	router.impl.Post(pattern, handlerFn)
 }
 
 func newRequestRouter() *RequestRouter {
@@ -115,6 +121,16 @@ func (cs contextSource) ProvidesEntitiesWithMatchingID(entityID string) bool {
 	return strings.HasPrefix(entityID, "urn:ngsi-ld:Device:")
 }
 
+func (cs *contextSource) CreateEntity(typeName, entityID string, req ngsi.Request) error {
+	device := &fiware.Device{}
+	err := req.DecodeBodyInto(device)
+
+	// TODO: Save this device somewhere ...
+	log.Warningln("Creating new Device entities is not implemented yet!")
+
+	return err
+}
+
 func (cs *contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntitiesCallback) error {
 
 	var err error
@@ -137,10 +153,10 @@ func (cs contextSource) ProvidesType(typeName string) bool {
 	return typeName == "Device"
 }
 
-func (cs *contextSource) UpdateEntityAttributes(entityID string, patch ngsi.Patch) error {
+func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Request) error {
 
 	updateSource := &fiware.Device{}
-	err := patch.DecodeBodyInto(updateSource)
+	err := req.DecodeBodyInto(updateSource)
 	if err != nil {
 		log.Errorln("Failed to decode PATCH body in UpdateEntityAttributes: " + err.Error())
 		return err
