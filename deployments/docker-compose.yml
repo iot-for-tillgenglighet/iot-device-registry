@@ -6,9 +6,27 @@ services:
       context: ..
       dockerfile: ./deployments/Dockerfile
     restart: always
+    depends_on:
+      - rabbitmq
+    links:
+      - rabbitmq
     environment:
       SERVICE_PORT: '8686'
+      RABBITMQ_HOST: 'rabbitmq'
     
     ports:
       - '8686:8686'
 
+  rabbitmq:
+    image: 'bitnami/rabbitmq:3.8'
+    ports:
+      - '4369'
+      - '5672'
+      - '25672'
+      - '15672'
+    volumes:
+      - 'rabbitmq_data:/bitnami'
+  
+volumes:
+  rabbitmq_data:
+    driver: local
