@@ -14,6 +14,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/database"
 	gql "github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/graphql"
 	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging"
 	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging/telemetry"
@@ -98,7 +99,7 @@ func createContextRegistry(messenger MessagingContext) ngsi.ContextRegistry {
 }
 
 //CreateRouterAndStartServing sets up the NGSI-LD router and starts serving incoming requests
-func CreateRouterAndStartServing(messenger MessagingContext) {
+func CreateRouterAndStartServing(messenger MessagingContext, db database.Datastore) {
 	contextRegistry := createContextRegistry(messenger)
 	router := createRequestRouter(contextRegistry)
 
