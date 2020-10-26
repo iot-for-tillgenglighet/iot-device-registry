@@ -8,14 +8,34 @@ services:
     restart: always
     depends_on:
       - rabbitmq
+      - postgresdb
     links:
       - rabbitmq
+      - postgresdb
     environment:
+      DEVREG_DB_HOST: 'postgresdb'
+      DEVREG_DB_USER: 'testuser'
+      DEVREG_DB_NAME: 'devreg'
+      DEVREG_DB_PASSWORD: 'testpass'
+      DEVREG_DB_SSLMODE: 'disable'
       SERVICE_PORT: '8686'
       RABBITMQ_HOST: 'rabbitmq'
     
     ports:
       - '8686:8686'
+
+  postgresdb:
+    image: 'iot-for-tillgenglighet/testdb-postgres:latest'
+    build:
+      context: ..
+      dockerfile: ./test/database/testdb-dockerfile
+    restart: always
+    environment:
+      POSTGRES_DB: 'devreg'
+      POSTGRES_USER: 'testuser'
+      POSTGRES_PASSWORD: 'testpass'
+    ports:
+      - '5432'
 
   rabbitmq:
     image: 'bitnami/rabbitmq:3.8'
