@@ -91,16 +91,16 @@ type MessagingContext interface {
 	PublishOnTopic(message messaging.TopicMessage) error
 }
 
-func createContextRegistry(messenger MessagingContext) ngsi.ContextRegistry {
+func createContextRegistry(messenger MessagingContext, db database.Datastore) ngsi.ContextRegistry {
 	contextRegistry := ngsi.NewContextRegistry()
-	ctxSource := contextSource{messenger: messenger}
+	ctxSource := contextSource{db: db, messenger: messenger}
 	contextRegistry.Register(&ctxSource)
 	return contextRegistry
 }
 
 //CreateRouterAndStartServing sets up the NGSI-LD router and starts serving incoming requests
 func CreateRouterAndStartServing(messenger MessagingContext, db database.Datastore) {
-	contextRegistry := createContextRegistry(messenger)
+	contextRegistry := createContextRegistry(messenger, db)
 	router := createRequestRouter(contextRegistry)
 
 	port := os.Getenv("SERVICE_PORT")
@@ -114,6 +114,7 @@ func CreateRouterAndStartServing(messenger MessagingContext, db database.Datasto
 }
 
 type contextSource struct {
+	db        database.Datastore
 	messenger MessagingContext
 	devices   []fiware.Device
 }
@@ -126,8 +127,9 @@ func (cs *contextSource) CreateEntity(typeName, entityID string, req ngsi.Reques
 	device := &fiware.Device{}
 	err := req.DecodeBodyInto(device)
 
-	// TODO: Save this device somewhere ...
-	log.Warningln("Creating new Device entities is not implemented yet!")
+	if err == nil {
+		_, err = cs.db.CreateDevice(device)
+	}
 
 	return err
 }

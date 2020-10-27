@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/models"
+	"github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/datamodels/fiware"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/jinzhu/gorm"
@@ -17,6 +18,7 @@ import (
 
 //Datastore is an interface that is used to inject the database into different handlers to improve testability
 type Datastore interface {
+	CreateDevice(device *fiware.Device) (*models.Device, error)
 }
 
 var dbCtxKey = &databaseContextKey{"database"}
@@ -86,4 +88,20 @@ func NewDatabaseConnection() (Datastore, error) {
 	}
 
 	return db, nil
+}
+
+func (db *myDB) CreateDevice(src *fiware.Device) (*models.Device, error) {
+
+	device := &models.Device{
+		DeviceID: src.ID,
+	}
+
+	if src.Location != nil {
+		device.Latitude = src.Location.Value.Coordinates[0]
+		device.Longitude = src.Location.Value.Coordinates[1]
+	}
+
+	db.impl.Create(device)
+
+	return device, nil
 }

@@ -28,7 +28,7 @@ func TestThatPatchWaterTempDevicePublishesOnTheMessageQueue(t *testing.T) {
 	req, _ := http.NewRequest("PATCH", createURL("/ngsi-ld/v1/entities/urn:ngsi-ld:Device:sk-elt-temp-02/attrs/"), bytes.NewBuffer(jsonBytes))
 	w := httptest.NewRecorder()
 
-	ctxreg := createContextRegistry(&m)
+	ctxreg := createContextRegistry(&m, nil)
 	ngsi.NewUpdateEntityAttributesHandler(ctxreg).ServeHTTP(w, req)
 
 	if m.PublishCount != 1 {
