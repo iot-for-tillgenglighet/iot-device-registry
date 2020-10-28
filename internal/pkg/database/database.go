@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/models"
@@ -92,8 +93,17 @@ func NewDatabaseConnection() (Datastore, error) {
 
 func (db *myDB) CreateDevice(src *fiware.Device) (*models.Device, error) {
 
+	deviceModel := src.RefDeviceModel.Object
+
+	if deviceModelIsOfUnknownType(deviceModel) {
+		errorMessage := fmt.Sprintf("Adding devices of type " + deviceModel + " is not supported.")
+		log.Error(errorMessage)
+		return nil, errors.New(errorMessage)
+	}
+
 	device := &models.Device{
-		DeviceID: src.ID,
+		DeviceID:      src.ID,
+		DeviceModelID: strings.TrimPrefix(deviceModel, "urn:ngsi-ld:DeviceModel:"),
 	}
 
 	if src.Location != nil {
@@ -101,7 +111,19 @@ func (db *myDB) CreateDevice(src *fiware.Device) (*models.Device, error) {
 		device.Longitude = src.Location.Value.Coordinates[1]
 	}
 
-	db.impl.Create(device)
+	db.impl.Debug().Create(device)
 
 	return device, nil
+}
+
+func deviceModelIsOfUnknownType(deviceModel string) bool {
+	knownTypes := []string{"urn:ngsi-ld:DeviceModel:badtemperatur", "urn:ngsi-ld:DeviceModel:livboj"}
+
+	for _, kt := range knownTypes {
+		if deviceModel == kt {
+			return false
+		}
+	}
+
+	return true
 }
