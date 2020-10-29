@@ -66,7 +66,7 @@ func TestThatCreateEntityStoresCorrectDevice(t *testing.T) {
 	ngsi.NewCreateEntityHandler(ctxreg).ServeHTTP(w, req)
 
 	if db.CreateCount != 1 {
-		t.Error("CreateCount should be 1, but was " + string(db.CreateCount))
+		t.Error("CreateCount should be 1, but was ", db.CreateCount, "!")
 	}
 
 	if db.Device.ID != deviceID {
