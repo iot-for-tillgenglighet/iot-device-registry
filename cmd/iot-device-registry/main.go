@@ -13,6 +13,7 @@ func main() {
 
 	serviceName := "iot-device-registry"
 
+	log.SetFormatter(&log.JSONFormatter{})
 	log.Infof("Starting up %s ...", serviceName)
 
 	config := messaging.LoadConfiguration(serviceName)
