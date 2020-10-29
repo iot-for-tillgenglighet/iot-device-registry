@@ -2,6 +2,8 @@ package handler
 
 import (
 	"compress/flate"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -126,10 +128,23 @@ func (cs contextSource) ProvidesEntitiesWithMatchingID(entityID string) bool {
 func (cs *contextSource) CreateEntity(typeName, entityID string, req ngsi.Request) error {
 	device := &fiware.Device{}
 	err := req.DecodeBodyInto(device)
-
-	if err == nil {
-		_, err = cs.db.CreateDevice(device)
+	if err != nil {
+		log.Error("Failed to decode body into Device: " + err.Error())
+		return err
 	}
+
+	deviceModel := "none"
+	if device.RefDeviceModel != nil {
+		deviceModel = device.RefDeviceModel.Object
+	}
+
+	if deviceModelIsOfUnknownType(deviceModel) {
+		errorMessage := fmt.Sprintf("Adding devices of type " + deviceModel + " is not supported.")
+		log.Error(errorMessage)
+		return errors.New(errorMessage)
+	}
+
+	_, err = cs.db.CreateDevice(device)
 
 	return err
 }
@@ -180,6 +195,18 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Reques
 	cs.devices = append(cs.devices, *fiware.NewDevice(shortEntityID, updateSource.Value.Value))
 
 	return nil
+}
+
+func deviceModelIsOfUnknownType(deviceModel string) bool {
+	knownTypes := []string{"urn:ngsi-ld:DeviceModel:badtemperatur", "urn:ngsi-ld:DeviceModel:livboj"}
+
+	for _, kt := range knownTypes {
+		if deviceModel == kt {
+			return false
+		}
+	}
+
+	return true
 }
 
 //This is a hack to decode the value and send it as a telemetry message over RabbitMQ for PoC purposes.

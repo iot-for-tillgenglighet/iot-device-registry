@@ -95,12 +95,6 @@ func (db *myDB) CreateDevice(src *fiware.Device) (*models.Device, error) {
 
 	deviceModel := src.RefDeviceModel.Object
 
-	if deviceModelIsOfUnknownType(deviceModel) {
-		errorMessage := fmt.Sprintf("Adding devices of type " + deviceModel + " is not supported.")
-		log.Error(errorMessage)
-		return nil, errors.New(errorMessage)
-	}
-
 	device := &models.Device{
 		DeviceID:      src.ID,
 		DeviceModelID: strings.TrimPrefix(deviceModel, "urn:ngsi-ld:DeviceModel:"),
@@ -114,16 +108,4 @@ func (db *myDB) CreateDevice(src *fiware.Device) (*models.Device, error) {
 	db.impl.Debug().Create(device)
 
 	return device, nil
-}
-
-func deviceModelIsOfUnknownType(deviceModel string) bool {
-	knownTypes := []string{"urn:ngsi-ld:DeviceModel:badtemperatur", "urn:ngsi-ld:DeviceModel:livboj"}
-
-	for _, kt := range knownTypes {
-		if deviceModel == kt {
-			return false
-		}
-	}
-
-	return true
 }
