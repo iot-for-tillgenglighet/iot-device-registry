@@ -11,14 +11,67 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/models"
 	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging"
 	"github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/datamodels/fiware"
 	ngsi "github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/ngsi-ld"
+	ngsitypes "github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/ngsi-ld/types"
 )
 
 func TestMain(m *testing.M) {
 	log.SetFormatter(&log.JSONFormatter{})
 	os.Exit(m.Run())
+}
+
+func TestThatCreateEntityDoesNotAcceptUnknownBody(t *testing.T) {
+	bodyContents := []byte("{\"json\":\"json\"}")
+	req, _ := http.NewRequest("POST", createURL("/ngsi-ld/v1/entities"), bytes.NewBuffer(bodyContents))
+	w := httptest.NewRecorder()
+
+	ctxreg := createContextRegistry(nil, nil)
+	ngsi.NewCreateEntityHandler(ctxreg).ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Error("CreateEntity did not return a BadRequest status.")
+	}
+}
+
+func TestThatCreateEntityDoesNotAcceptUnknownDeviceModel(t *testing.T) {
+	device := fiware.NewDevice("deviceID", "")
+	device.RefDeviceModel, _ = ngsitypes.NewDeviceModelRelationship("urn:ngsi-ld:DeviceModel:hotchip")
+	jsonBytes, _ := json.Marshal(device)
+
+	req, _ := http.NewRequest("POST", createURL("/ngsi-ld/v1/entities"), bytes.NewBuffer(jsonBytes))
+	w := httptest.NewRecorder()
+
+	ctxreg := createContextRegistry(nil, nil)
+	ngsi.NewCreateEntityHandler(ctxreg).ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Error("CreateEntity did not return a BadRequest status.")
+	}
+}
+
+func TestThatCreateEntityStoresCorrectDevice(t *testing.T) {
+	db := &dbMock{}
+	deviceID := "urn:ngsi-ld:Device:deviceID"
+	device := fiware.NewDevice(deviceID, "")
+	device.RefDeviceModel, _ = ngsitypes.NewDeviceModelRelationship("urn:ngsi-ld:DeviceModel:livboj")
+	jsonBytes, _ := json.Marshal(device)
+
+	req, _ := http.NewRequest("POST", createURL("/ngsi-ld/v1/entities"), bytes.NewBuffer(jsonBytes))
+	w := httptest.NewRecorder()
+
+	ctxreg := createContextRegistry(nil, db)
+	ngsi.NewCreateEntityHandler(ctxreg).ServeHTTP(w, req)
+
+	if db.CreateCount != 1 {
+		t.Error("CreateCount should be 1, but was " + string(db.CreateCount))
+	}
+
+	if db.Device.ID != deviceID {
+		t.Error("DeviceID should be " + deviceID + ", but was " + db.Device.ID)
+	}
 }
 
 func TestThatPatchWaterTempDevicePublishesOnTheMessageQueue(t *testing.T) {
@@ -64,4 +117,16 @@ type msgMock struct {
 func (m *msgMock) PublishOnTopic(message messaging.TopicMessage) error {
 	m.PublishCount++
 	return nil
+}
+
+type dbMock struct {
+	CreateCount uint32
+	Device      *fiware.Device
+}
+
+func (db *dbMock) CreateDevice(device *fiware.Device) (*models.Device, error) {
+	db.CreateCount++
+	db.Device = device
+
+	return nil, nil
 }
