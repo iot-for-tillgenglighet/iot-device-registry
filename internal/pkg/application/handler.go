@@ -1,4 +1,4 @@
-package handler
+package application
 
 import (
 	"compress/flate"
@@ -16,8 +16,8 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/database"
-	gql "github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/graphql"
+	gql "github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/_presentation/api/graphql"
+	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/repositories/database"
 	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging"
 	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging/telemetry"
 

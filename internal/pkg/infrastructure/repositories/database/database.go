@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/models"
+	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/repositories/models"
 	"github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/datamodels/fiware"
 	log "github.com/sirupsen/logrus"
 

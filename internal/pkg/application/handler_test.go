@@ -1,4 +1,4 @@
-package handler
+package application
 
 import (
 	"bytes"
@@ -11,7 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/models"
+	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/repositories/models"
 	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging"
 	"github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/datamodels/fiware"
 	ngsi "github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/ngsi-ld"
