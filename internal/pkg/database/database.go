@@ -13,7 +13,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 //Datastore is an interface that is used to inject the database into different handlers to improve testability
@@ -64,10 +66,11 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-//NewDatabaseConnection initializes a new connection to the database and wraps it in a Datastore
-func NewDatabaseConnection() (Datastore, error) {
-	db := &myDB{}
+//ConnectorFunc is used to inject a database connection method into NewDatabaseConnection
+type ConnectorFunc func() (*gorm.DB, error)
 
+//NewPostgreSQLConnector opens a connection to a postgresql database
+func NewPostgreSQLConnector() ConnectorFunc {
 	dbHost := os.Getenv("DEVREG_DB_HOST")
 	username := os.Getenv("DEVREG_DB_USER")
 	dbName := os.Getenv("DEVREG_DB_NAME")
@@ -76,73 +79,101 @@ func NewDatabaseConnection() (Datastore, error) {
 
 	dbURI := fmt.Sprintf("host=%s user=%s dbname=%s sslmode=%s password=%s", dbHost, username, dbName, sslMode, password)
 
-	for {
-		log.Printf("Connecting to database host %s ...\n", dbHost)
-		conn, err := gorm.Open(postgres.Open(dbURI), &gorm.Config{})
-		if err != nil {
-			log.Fatalf("Failed to connect to database %s \n", err)
-			time.Sleep(3 * time.Second)
-		} else {
-			db.impl = conn
-			db.impl.Debug().AutoMigrate(&models.DeviceControlledProperty{})
-			db.impl.Debug().AutoMigrate(&models.DeviceModel{})
-			db.impl.Debug().AutoMigrate(&models.Device{})
-
-			db.impl.Debug().Model(&models.DeviceModel{}).Association("DeviceControlledProperty")
-			db.impl.Debug().Model(&models.Device{}).Association("DeviceModel")
-
-			// Make sure that the controlled properties table is properly seeded
-			props := map[string]string{
-				"temperature": "t",
-				"snowDepth":   "snow",
+	return func() (*gorm.DB, error) {
+		for {
+			log.Printf("Connecting to database host %s ...\n", dbHost)
+			db, err := gorm.Open(postgres.Open(dbURI), &gorm.Config{})
+			if err != nil {
+				log.Fatalf("Failed to connect to database %s \n", err)
+				time.Sleep(3 * time.Second)
+			} else {
+				return db, nil
 			}
-
-			for property, abbreviation := range props {
-				controlledProperty := models.DeviceControlledProperty{}
-
-				result := db.impl.Where("name = ?", property).First(&controlledProperty)
-				if result.RowsAffected == 0 {
-					log.Infof("ControlledProperty ", property, " not found in database. Creating ...")
-
-					controlledProperty.Name = property
-					controlledProperty.Abbreviation = abbreviation
-					result = db.impl.Debug().Create(&controlledProperty)
-
-					if result.Error != nil {
-						log.Fatalf("Failed to seed DeviceControlledProperty into database ", result.Error.Error())
-						return nil, result.Error
-					}
-				}
-
-				db.controlledProperties = append(db.controlledProperties, controlledProperty)
-			}
-
-			badtemp := models.DeviceModel{DeviceModelID: "urn:ngsi-ld:DeviceModel:badtemperatur", Category: "sensor"}
-			badtemp.ControlledProperties = db.getControlledProperties("temperatur")
-
-			livboj := models.DeviceModel{DeviceModelID: "urn:ngsi-ld:DeviceModel:livboj", Category: "sensor"}
-
-			deviceModels := []models.DeviceModel{badtemp, livboj}
-
-			for _, model := range deviceModels {
-				m := models.DeviceModel{}
-				result := db.impl.Debug().Where("device_model_id = ?", model.DeviceModelID).First(&m)
-				if result.RowsAffected == 0 {
-					m.DeviceModelID = model.DeviceModelID
-					m.Category = model.Category
-					m.ControlledProperties = model.ControlledProperties
-
-					result = db.impl.Debug().Create(&m)
-					if result.Error != nil {
-						log.Fatalf("Failed to seed DeviceModel into database ", result.Error.Error())
-						return nil, result.Error
-					}
-				}
-				db.deviceModels = append(db.deviceModels, m)
-			}
-
-			break
 		}
+	}
+}
+
+//NewSQLiteConnector opens a connection to a local sqlite database
+func NewSQLiteConnector() ConnectorFunc {
+	return func() (*gorm.DB, error) {
+		db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{
+			Logger: logger.Default.LogMode(logger.Silent),
+		})
+
+		if err == nil {
+			db.Exec("PRAGMA foreign_keys = ON")
+		}
+
+		return db, err
+	}
+}
+
+//NewDatabaseConnection initializes a new connection to the database and wraps it in a Datastore
+func NewDatabaseConnection(connect ConnectorFunc) (Datastore, error) {
+	impl, err := connect()
+	if err != nil {
+		return nil, err
+	}
+
+	db := &myDB{
+		impl: impl,
+	}
+
+	db.impl.Debug().AutoMigrate(&models.DeviceControlledProperty{})
+	db.impl.Debug().AutoMigrate(&models.DeviceModel{})
+	db.impl.Debug().AutoMigrate(&models.Device{})
+
+	db.impl.Debug().Model(&models.DeviceModel{}).Association("DeviceControlledProperty")
+	db.impl.Debug().Model(&models.Device{}).Association("DeviceModel")
+
+	// Make sure that the controlled properties table is properly seeded
+	props := map[string]string{
+		"temperature": "t",
+		"snowDepth":   "snow",
+	}
+
+	for property, abbreviation := range props {
+		controlledProperty := models.DeviceControlledProperty{}
+
+		result := db.impl.Where("name = ?", property).First(&controlledProperty)
+		if result.RowsAffected == 0 {
+			log.Infof("ControlledProperty %s not found in database. Creating ...", property)
+
+			controlledProperty.Name = property
+			controlledProperty.Abbreviation = abbreviation
+			result = db.impl.Debug().Create(&controlledProperty)
+
+			if result.Error != nil {
+				log.Fatalf("Failed to seed DeviceControlledProperty into database %s", result.Error.Error())
+				return nil, result.Error
+			}
+		}
+
+		db.controlledProperties = append(db.controlledProperties, controlledProperty)
+	}
+
+	badtemp := models.DeviceModel{DeviceModelID: "urn:ngsi-ld:DeviceModel:badtemperatur", Category: "sensor"}
+	badtemp.ControlledProperties = db.getControlledProperties("temperatur")
+
+	livboj := models.DeviceModel{DeviceModelID: "urn:ngsi-ld:DeviceModel:livboj", Category: "sensor"}
+
+	deviceModels := []models.DeviceModel{badtemp, livboj}
+
+	for _, model := range deviceModels {
+		m := models.DeviceModel{}
+		result := db.impl.Debug().Where("device_model_id = ?", model.DeviceModelID).First(&m)
+		if result.RowsAffected == 0 {
+			m.DeviceModelID = model.DeviceModelID
+			m.Category = model.Category
+			m.ControlledProperties = model.ControlledProperties
+
+			result = db.impl.Debug().Create(&m)
+			if result.Error != nil {
+				log.Fatalf("Failed to seed DeviceModel into database %s", result.Error.Error())
+				return nil, result.Error
+			}
+		}
+		db.deviceModels = append(db.deviceModels, m)
 	}
 
 	return db, nil

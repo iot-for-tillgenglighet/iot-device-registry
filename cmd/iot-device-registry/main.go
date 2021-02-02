@@ -21,7 +21,7 @@ func main() {
 
 	defer messenger.Close()
 
-	db, _ := database.NewDatabaseConnection()
+	db, _ := database.NewDatabaseConnection(database.NewPostgreSQLConnector())
 
 	handler.CreateRouterAndStartServing(messenger, db)
 }
