@@ -6,15 +6,14 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/models"
 	"github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/datamodels/fiware"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 //Datastore is an interface that is used to inject the database into different handlers to improve testability
@@ -53,6 +52,9 @@ func GetFromContext(ctx context.Context) (Datastore, error) {
 
 type myDB struct {
 	impl *gorm.DB
+
+	controlledProperties []models.DeviceControlledProperty
+	deviceModels         []models.DeviceModel
 }
 
 func getEnv(key, fallback string) string {
@@ -76,16 +78,71 @@ func NewDatabaseConnection() (Datastore, error) {
 
 	for {
 		log.Printf("Connecting to database host %s ...\n", dbHost)
-		conn, err := gorm.Open("postgres", dbURI)
+		conn, err := gorm.Open(postgres.Open(dbURI), &gorm.Config{})
 		if err != nil {
 			log.Fatalf("Failed to connect to database %s \n", err)
 			time.Sleep(3 * time.Second)
 		} else {
 			db.impl = conn
+			db.impl.Debug().AutoMigrate(&models.DeviceControlledProperty{})
+			db.impl.Debug().AutoMigrate(&models.DeviceModel{})
 			db.impl.Debug().AutoMigrate(&models.Device{})
+
+			db.impl.Debug().Model(&models.DeviceModel{}).Association("DeviceControlledProperty")
+			db.impl.Debug().Model(&models.Device{}).Association("DeviceModel")
+
+			// Make sure that the controlled properties table is properly seeded
+			props := map[string]string{
+				"temperature": "t",
+				"snowDepth":   "snow",
+			}
+
+			for property, abbreviation := range props {
+				controlledProperty := models.DeviceControlledProperty{}
+
+				result := db.impl.Where("name = ?", property).First(&controlledProperty)
+				if result.RowsAffected == 0 {
+					log.Infof("ControlledProperty ", property, " not found in database. Creating ...")
+
+					controlledProperty.Name = property
+					controlledProperty.Abbreviation = abbreviation
+					result = db.impl.Debug().Create(&controlledProperty)
+
+					if result.Error != nil {
+						log.Fatalf("Failed to seed DeviceControlledProperty into database ", result.Error.Error())
+						return nil, result.Error
+					}
+				}
+
+				db.controlledProperties = append(db.controlledProperties, controlledProperty)
+			}
+
+			badtemp := models.DeviceModel{DeviceModelID: "urn:ngsi-ld:DeviceModel:badtemperatur", Category: "sensor"}
+			badtemp.ControlledProperties = db.getControlledProperties("temperatur")
+
+			livboj := models.DeviceModel{DeviceModelID: "urn:ngsi-ld:DeviceModel:livboj", Category: "sensor"}
+
+			deviceModels := []models.DeviceModel{badtemp, livboj}
+
+			for _, model := range deviceModels {
+				m := models.DeviceModel{}
+				result := db.impl.Debug().Where("device_model_id = ?", model.DeviceModelID).First(&m)
+				if result.RowsAffected == 0 {
+					m.DeviceModelID = model.DeviceModelID
+					m.Category = model.Category
+					m.ControlledProperties = model.ControlledProperties
+
+					result = db.impl.Debug().Create(&m)
+					if result.Error != nil {
+						log.Fatalf("Failed to seed DeviceModel into database ", result.Error.Error())
+						return nil, result.Error
+					}
+				}
+				db.deviceModels = append(db.deviceModels, m)
+			}
+
 			break
 		}
-		defer conn.Close()
 	}
 
 	return db, nil
@@ -93,11 +150,14 @@ func NewDatabaseConnection() (Datastore, error) {
 
 func (db *myDB) CreateDevice(src *fiware.Device) (*models.Device, error) {
 
-	deviceModel := src.RefDeviceModel.Object
+	deviceModel, err := db.getDeviceModelFromString(src.RefDeviceModel.Object)
+	if err != nil {
+		return nil, err
+	}
 
 	device := &models.Device{
-		DeviceID:      src.ID,
-		DeviceModelID: strings.TrimPrefix(deviceModel, "urn:ngsi-ld:DeviceModel:"),
+		DeviceID:    src.ID,
+		DeviceModel: *deviceModel,
 	}
 
 	if src.Location != nil {
@@ -108,4 +168,29 @@ func (db *myDB) CreateDevice(src *fiware.Device) (*models.Device, error) {
 	db.impl.Debug().Create(device)
 
 	return device, nil
+}
+
+func (db *myDB) getControlledProperties(properties ...string) []models.DeviceControlledProperty {
+	found := []models.DeviceControlledProperty{}
+
+	for _, p := range properties {
+		for _, controlledProperty := range db.controlledProperties {
+			if controlledProperty.Name == p {
+				found = append(found, controlledProperty)
+				break
+			}
+		}
+	}
+
+	return found
+}
+
+func (db *myDB) getDeviceModelFromString(deviceModel string) (*models.DeviceModel, error) {
+	for idx, model := range db.deviceModels {
+		if model.DeviceModelID == deviceModel {
+			return &db.deviceModels[idx], nil
+		}
+	}
+
+	return nil, errors.New("No DeviceModel found matching " + deviceModel)
 }
