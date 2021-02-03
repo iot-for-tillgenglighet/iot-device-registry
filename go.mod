@@ -6,7 +6,7 @@ require (
 	github.com/99designs/gqlgen v0.11.1
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/iot-for-tillgenglighet/messaging-golang v0.0.0-20201009211140-579335ad3c49
-	github.com/iot-for-tillgenglighet/ngsi-ld-golang v0.0.0-20201029160316-c6fe6d155326
+	github.com/iot-for-tillgenglighet/ngsi-ld-golang v0.0.0-20210203142601-3118f5101a69
 	github.com/jinzhu/gorm v1.9.16
 	github.com/rs/cors v1.7.0
 	github.com/sirupsen/logrus v1.7.0

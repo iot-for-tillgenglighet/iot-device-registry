@@ -130,3 +130,7 @@ func (db *dbMock) CreateDevice(device *fiware.Device) (*models.Device, error) {
 
 	return nil, nil
 }
+
+func (db *dbMock) CreateDeviceModel(deviceModel *fiware.DeviceModel) (*models.DeviceModel, error) {
+	return nil, nil
+}

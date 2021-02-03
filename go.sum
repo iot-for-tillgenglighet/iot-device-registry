@@ -46,8 +46,8 @@ github.com/hashicorp/golang-lru v0.5.0 h1:CL2msUPvZTLb5O648aiLNJw3hnBxN2+1Jq8rCO
 github.com/hashicorp/golang-lru v0.5.0/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/iot-for-tillgenglighet/messaging-golang v0.0.0-20201009211140-579335ad3c49 h1:hFrusruQgpURcEsdkJau7Pq7pjJ0ssPcKQv+Ad3J1js=
 github.com/iot-for-tillgenglighet/messaging-golang v0.0.0-20201009211140-579335ad3c49/go.mod h1:KAWin6BX41/tyhpYYff1UgOEz5ShtDLEmQ9naYUiC0c=
-github.com/iot-for-tillgenglighet/ngsi-ld-golang v0.0.0-20201029160316-c6fe6d155326 h1:zV8xNquvPyo+vECbj22FmyUoCU9TIyJkAqS85YZdftQ=
-github.com/iot-for-tillgenglighet/ngsi-ld-golang v0.0.0-20201029160316-c6fe6d155326/go.mod h1:cIbwqe96AYjHMj6nIth2RlcoOyrju81almGfQyVYAlM=
+github.com/iot-for-tillgenglighet/ngsi-ld-golang v0.0.0-20210203142601-3118f5101a69 h1:gAd/Ffb8o1OQQGH45vcut0xBmJZjEclyqxmSDhFl9+U=
+github.com/iot-for-tillgenglighet/ngsi-ld-golang v0.0.0-20210203142601-3118f5101a69/go.mod h1:cIbwqe96AYjHMj6nIth2RlcoOyrju81almGfQyVYAlM=
 github.com/jackc/chunkreader v1.0.0 h1:4s39bBR8ByfqH+DKm8rQA3E1LHZWB9XWcrz8fqaZbe0=
 github.com/jackc/chunkreader v1.0.0/go.mod h1:RT6O25fNZIuasFJRyZ4R/Y2BbhasbmZXF9QQ7T3kePo=
 github.com/jackc/chunkreader/v2 v2.0.0/go.mod h1:odVSm741yZoC3dpHEUXIqA9tQRhFrgOHwnPIn9lDKlk=

@@ -21,6 +21,7 @@ import (
 //Datastore is an interface that is used to inject the database into different handlers to improve testability
 type Datastore interface {
 	CreateDevice(device *fiware.Device) (*models.Device, error)
+	CreateDeviceModel(deviceModel *fiware.DeviceModel) (*models.DeviceModel, error)
 }
 
 var dbCtxKey = &databaseContextKey{"database"}
@@ -56,7 +57,6 @@ type myDB struct {
 	impl *gorm.DB
 
 	controlledProperties []models.DeviceControlledProperty
-	deviceModels         []models.DeviceModel
 }
 
 func getEnv(key, fallback string) string {
@@ -152,7 +152,7 @@ func NewDatabaseConnection(connect ConnectorFunc) (Datastore, error) {
 		db.controlledProperties = append(db.controlledProperties, controlledProperty)
 	}
 
-	badtemp := models.DeviceModel{DeviceModelID: "urn:ngsi-ld:DeviceModel:badtemperatur", Category: "sensor"}
+	/*badtemp := models.DeviceModel{DeviceModelID: "urn:ngsi-ld:DeviceModel:badtemperatur", Category: "sensor"}
 	badtemp.ControlledProperties = db.getControlledProperties("temperatur")
 
 	livboj := models.DeviceModel{DeviceModelID: "urn:ngsi-ld:DeviceModel:livboj", Category: "sensor"}
@@ -174,12 +174,16 @@ func NewDatabaseConnection(connect ConnectorFunc) (Datastore, error) {
 			}
 		}
 		db.deviceModels = append(db.deviceModels, m)
-	}
+	}*/
 
 	return db, nil
 }
 
 func (db *myDB) CreateDevice(src *fiware.Device) (*models.Device, error) {
+
+	if src.RefDeviceModel == nil {
+		return nil, fmt.Errorf("CreateDevice requires non-empty device model")
+	}
 
 	deviceModel, err := db.getDeviceModelFromString(src.RefDeviceModel.Object)
 	if err != nil {
@@ -201,6 +205,18 @@ func (db *myDB) CreateDevice(src *fiware.Device) (*models.Device, error) {
 	return device, nil
 }
 
+func (db *myDB) CreateDeviceModel(src *fiware.DeviceModel) (*models.DeviceModel, error) {
+
+	deviceModel := &models.DeviceModel{
+		DeviceModelID: src.ID,
+		Category:      src.Category.Value[0],
+	}
+
+	db.impl.Debug().Create(deviceModel)
+
+	return deviceModel, nil
+}
+
 func (db *myDB) getControlledProperties(properties ...string) []models.DeviceControlledProperty {
 	found := []models.DeviceControlledProperty{}
 
@@ -216,12 +232,12 @@ func (db *myDB) getControlledProperties(properties ...string) []models.DeviceCon
 	return found
 }
 
-func (db *myDB) getDeviceModelFromString(deviceModel string) (*models.DeviceModel, error) {
-	for idx, model := range db.deviceModels {
-		if model.DeviceModelID == deviceModel {
-			return &db.deviceModels[idx], nil
-		}
+func (db *myDB) getDeviceModelFromString(deviceModelID string) (*models.DeviceModel, error) {
+	m := &models.DeviceModel{}
+	result := db.impl.Debug().Where("device_model_id = ?", deviceModelID).First(m)
+	if result.RowsAffected == 1 {
+		return m, nil
 	}
 
-	return nil, errors.New("No DeviceModel found matching " + deviceModel)
+	return nil, errors.New("No DeviceModel found matching " + deviceModelID)
 }
