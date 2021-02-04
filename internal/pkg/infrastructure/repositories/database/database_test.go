@@ -1,7 +1,6 @@
 package database
 
 import (
-	"encoding/json"
 	"os"
 	"strings"
 	"testing"
@@ -65,6 +64,7 @@ func TestCreateDeviceModel(t *testing.T) {
 
 	categories := []string{"temperature"}
 	deviceModel := fiware.NewDeviceModel("ID", categories)
+	deviceModel.ControlledProperty = types.NewTextListProperty([]string{"temperature"})
 
 	_, err = db.CreateDeviceModel(deviceModel)
 	if err != nil {
@@ -81,6 +81,7 @@ func TestCreateDevice(t *testing.T) {
 
 	categories := []string{"T"}
 	deviceModel := fiware.NewDeviceModel("ID2", categories)
+	deviceModel.ControlledProperty = types.NewTextListProperty([]string{"temperature"})
 
 	_, err = db.CreateDeviceModel(deviceModel)
 	if err != nil {
@@ -96,10 +97,44 @@ func TestCreateDevice(t *testing.T) {
 	}
 }
 
-func deviceFromJSON(deviceJSON string) (*fiware.Device, error) {
-	strToByte := []byte(deviceJSON)
-	device := &fiware.Device{}
-	err := json.Unmarshal(strToByte, device)
+func TestCreateDeviceModelForWaterTemperatureDevice(t *testing.T) {
+	db, err := NewDatabaseConnection(NewSQLiteConnector())
 
-	return device, err
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	categories := []string{"sensor"}
+	deviceModel := fiware.NewDeviceModel("badtemperatur", categories)
+	deviceModel.ControlledProperty = types.NewTextListProperty([]string{"temperature"})
+
+	_, err = db.CreateDeviceModel(deviceModel)
+	if err != nil {
+		t.Error("CreateDevice test failed:" + err.Error())
+	}
+
+	device := fiware.NewDevice("badtemperatur", "18.5")
+
+	device.RefDeviceModel, err = types.NewDeviceModelRelationship(deviceModel.ID)
+	_, err = db.CreateDevice(device)
+	if err != nil {
+		t.Error("CreateDevice test failed:" + err.Error())
+	}
+}
+
+func TestThatCreateDeviceModelFailsOnUnknownControlledProperty(t *testing.T) {
+	db, err := NewDatabaseConnection(NewSQLiteConnector())
+
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	categories := []string{"sensor"}
+	deviceModel := fiware.NewDeviceModel("badtemperatur", categories)
+	deviceModel.ControlledProperty = types.NewTextListProperty([]string{"spaceship"})
+
+	_, err = db.CreateDeviceModel(deviceModel)
+	if err == nil || strings.Compare(err.Error(), "Controlled property is not supported: Unable to find all controlled properties [spaceship]") != 0 {
+		t.Error("CreateDeviceModelUnknownControlledProperty test failed:" + err.Error())
+	}
 }

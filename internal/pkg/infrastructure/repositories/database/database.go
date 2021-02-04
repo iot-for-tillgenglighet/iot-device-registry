@@ -207,9 +207,19 @@ func (db *myDB) CreateDevice(src *fiware.Device) (*models.Device, error) {
 
 func (db *myDB) CreateDeviceModel(src *fiware.DeviceModel) (*models.DeviceModel, error) {
 
+	if src.ControlledProperty == nil {
+		return nil, fmt.Errorf("Creating device model is not allowed without controlled properties")
+	}
+
+	controlledProperties, err := db.getControlledProperties(src.ControlledProperty.Value)
+	if err != nil {
+		return nil, fmt.Errorf("Controlled property is not supported: %s", err.Error())
+	}
+
 	deviceModel := &models.DeviceModel{
-		DeviceModelID: src.ID,
-		Category:      src.Category.Value[0],
+		DeviceModelID:        src.ID,
+		Category:             src.Category.Value[0],
+		ControlledProperties: controlledProperties,
 	}
 
 	db.impl.Debug().Create(deviceModel)
@@ -217,7 +227,7 @@ func (db *myDB) CreateDeviceModel(src *fiware.DeviceModel) (*models.DeviceModel,
 	return deviceModel, nil
 }
 
-func (db *myDB) getControlledProperties(properties ...string) []models.DeviceControlledProperty {
+func (db *myDB) getControlledProperties(properties []string) ([]models.DeviceControlledProperty, error) {
 	found := []models.DeviceControlledProperty{}
 
 	for _, p := range properties {
@@ -229,7 +239,11 @@ func (db *myDB) getControlledProperties(properties ...string) []models.DeviceCon
 		}
 	}
 
-	return found
+	if len(found) != len(properties) {
+		return nil, fmt.Errorf("Unable to find all controlled properties %v", properties)
+	}
+
+	return found, nil
 }
 
 func (db *myDB) getDeviceModelFromString(deviceModelID string) (*models.DeviceModel, error) {
