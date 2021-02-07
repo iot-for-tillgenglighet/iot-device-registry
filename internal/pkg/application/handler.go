@@ -17,12 +17,12 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	gql "github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/_presentation/api/graphql"
+	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/logging"
 	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/repositories/database"
 	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging"
 	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging/telemetry"
 
 	"github.com/rs/cors"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/datamodels/fiware"
 	ngsi "github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/ngsi-ld"
@@ -93,16 +93,16 @@ type MessagingContext interface {
 	PublishOnTopic(message messaging.TopicMessage) error
 }
 
-func createContextRegistry(messenger MessagingContext, db database.Datastore) ngsi.ContextRegistry {
+func createContextRegistry(log logging.Logger, messenger MessagingContext, db database.Datastore) ngsi.ContextRegistry {
 	contextRegistry := ngsi.NewContextRegistry()
-	ctxSource := contextSource{db: db, messenger: messenger}
+	ctxSource := contextSource{db: db, log: log, messenger: messenger}
 	contextRegistry.Register(&ctxSource)
 	return contextRegistry
 }
 
 //CreateRouterAndStartServing sets up the NGSI-LD router and starts serving incoming requests
-func CreateRouterAndStartServing(messenger MessagingContext, db database.Datastore) {
-	contextRegistry := createContextRegistry(messenger, db)
+func CreateRouterAndStartServing(log logging.Logger, messenger MessagingContext, db database.Datastore) {
+	contextRegistry := createContextRegistry(log, messenger, db)
 	router := createRequestRouter(contextRegistry)
 
 	port := os.Getenv("SERVICE_PORT")
@@ -110,13 +110,13 @@ func CreateRouterAndStartServing(messenger MessagingContext, db database.Datasto
 		port = "8880"
 	}
 
-	log.Printf("Starting iot-device-registry on port %s.\n", port)
-
+	log.Infof("Starting iot-device-registry on port %s.\n", port)
 	log.Fatal(http.ListenAndServe(":"+port, router.impl))
 }
 
 type contextSource struct {
 	db        database.Datastore
+	log       logging.Logger
 	messenger MessagingContext
 	devices   []fiware.Device
 }
@@ -129,7 +129,7 @@ func (cs *contextSource) CreateEntity(typeName, entityID string, req ngsi.Reques
 	device := &fiware.Device{}
 	err := req.DecodeBodyInto(device)
 	if err != nil {
-		log.Error("Failed to decode body into Device: " + err.Error())
+		cs.log.Errorf("Failed to decode body into Device: %s", err.Error())
 		return err
 	}
 
@@ -140,7 +140,7 @@ func (cs *contextSource) CreateEntity(typeName, entityID string, req ngsi.Reques
 
 	if deviceModelIsOfUnknownType(deviceModel) {
 		errorMessage := fmt.Sprintf("Adding devices of type " + deviceModel + " is not supported.")
-		log.Error(errorMessage)
+		cs.log.Errorf(errorMessage)
 		return errors.New(errorMessage)
 	}
 
@@ -176,7 +176,7 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Reques
 	updateSource := &fiware.Device{}
 	err := req.DecodeBodyInto(updateSource)
 	if err != nil {
-		log.Errorln("Failed to decode PATCH body in UpdateEntityAttributes: " + err.Error())
+		cs.log.Errorf("Failed to decode PATCH body in UpdateEntityAttributes: %s", err.Error())
 		return err
 	}
 

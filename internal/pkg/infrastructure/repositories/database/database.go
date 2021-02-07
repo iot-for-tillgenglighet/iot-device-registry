@@ -8,9 +8,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/logging"
 	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/repositories/models"
 	"github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/datamodels/fiware"
-	log "github.com/sirupsen/logrus"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
@@ -70,7 +70,7 @@ func getEnv(key, fallback string) string {
 type ConnectorFunc func() (*gorm.DB, error)
 
 //NewPostgreSQLConnector opens a connection to a postgresql database
-func NewPostgreSQLConnector() ConnectorFunc {
+func NewPostgreSQLConnector(log logging.Logger) ConnectorFunc {
 	dbHost := os.Getenv("DEVREG_DB_HOST")
 	username := os.Getenv("DEVREG_DB_USER")
 	dbName := os.Getenv("DEVREG_DB_NAME")
@@ -81,10 +81,10 @@ func NewPostgreSQLConnector() ConnectorFunc {
 
 	return func() (*gorm.DB, error) {
 		for {
-			log.Printf("Connecting to database host %s ...\n", dbHost)
+			log.Infof("Connecting to database host %s ...\n", dbHost)
 			db, err := gorm.Open(postgres.Open(dbURI), &gorm.Config{})
 			if err != nil {
-				log.Fatalf("Failed to connect to database %s \n", err)
+				log.Fatalf("Failed to connect to database %s\n", err)
 				time.Sleep(3 * time.Second)
 			} else {
 				return db, nil
@@ -109,7 +109,7 @@ func NewSQLiteConnector() ConnectorFunc {
 }
 
 //NewDatabaseConnection initializes a new connection to the database and wraps it in a Datastore
-func NewDatabaseConnection(connect ConnectorFunc) (Datastore, error) {
+func NewDatabaseConnection(connect ConnectorFunc, log logging.Logger) (Datastore, error) {
 	impl, err := connect()
 	if err != nil {
 		return nil, err

@@ -6,13 +6,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/logging"
 	"github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/datamodels/fiware"
 	"github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/ngsi-ld/types"
-	log "github.com/sirupsen/logrus"
 )
 
 func TestMain(m *testing.M) {
-	log.SetFormatter(&log.JSONFormatter{})
 	os.Exit(m.Run())
 }
 
@@ -74,7 +73,8 @@ func TestCreateDevice(t *testing.T) {
 }
 
 func newDatabaseForTest(t *testing.T) (Datastore, bool) {
-	db, err := NewDatabaseConnection(NewSQLiteConnector())
+	log := logging.NewLogger()
+	db, err := NewDatabaseConnection(NewSQLiteConnector(), log)
 
 	if err != nil {
 		t.Error(err.Error())
