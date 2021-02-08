@@ -55,7 +55,8 @@ func TestCreateDeviceModel(t *testing.T) {
 func TestCreateDevice(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
 		categories := []string{"T"}
-		deviceModel := fiware.NewDeviceModel("ID2", categories)
+		deviceModel := fiware.NewDeviceModel("ID", categories)
+		deviceModel.ControlledProperty = types.NewTextListProperty([]string{"temperature"})
 
 		_, err := db.CreateDeviceModel(deviceModel)
 		if err != nil {
@@ -73,44 +74,37 @@ func TestCreateDevice(t *testing.T) {
 }
 
 func TestCreateDeviceModelForWaterTemperatureDevice(t *testing.T) {
-	db, err := NewDatabaseConnection(NewSQLiteConnector())
+	if db, ok := newDatabaseForTest(t); ok {
 
-	if err != nil {
-		t.Error(err.Error())
-	}
+		categories := []string{"sensor"}
+		deviceModel := fiware.NewDeviceModel("badtemperatur", categories)
+		deviceModel.ControlledProperty = types.NewTextListProperty([]string{"temperature"})
 
-	categories := []string{"sensor"}
-	deviceModel := fiware.NewDeviceModel("badtemperatur", categories)
-	deviceModel.ControlledProperty = types.NewTextListProperty([]string{"temperature"})
+		_, err := db.CreateDeviceModel(deviceModel)
+		if err != nil {
+			t.Error("CreateDevice test failed:" + err.Error())
+		}
 
-	_, err = db.CreateDeviceModel(deviceModel)
-	if err != nil {
-		t.Error("CreateDevice test failed:" + err.Error())
-	}
+		device := fiware.NewDevice("badtemperatur", "18.5")
 
-	device := fiware.NewDevice("badtemperatur", "18.5")
-
-	device.RefDeviceModel, err = types.NewDeviceModelRelationship(deviceModel.ID)
-	_, err = db.CreateDevice(device)
-	if err != nil {
-		t.Error("CreateDevice test failed:" + err.Error())
+		device.RefDeviceModel, err = types.NewDeviceModelRelationship(deviceModel.ID)
+		_, err = db.CreateDevice(device)
+		if err != nil {
+			t.Error("CreateDevice test failed:" + err.Error())
+		}
 	}
 }
 
 func TestThatCreateDeviceModelFailsOnUnknownControlledProperty(t *testing.T) {
-	db, err := NewDatabaseConnection(NewSQLiteConnector())
+	if db, ok := newDatabaseForTest(t); ok {
+		categories := []string{"sensor"}
+		deviceModel := fiware.NewDeviceModel("badtemperatur", categories)
+		deviceModel.ControlledProperty = types.NewTextListProperty([]string{"spaceship"})
 
-	if err != nil {
-		t.Error(err.Error())
-	}
-
-	categories := []string{"sensor"}
-	deviceModel := fiware.NewDeviceModel("badtemperatur", categories)
-	deviceModel.ControlledProperty = types.NewTextListProperty([]string{"spaceship"})
-
-	_, err = db.CreateDeviceModel(deviceModel)
-	if err == nil || strings.Compare(err.Error(), "Controlled property is not supported: Unable to find all controlled properties [spaceship]") != 0 {
-		t.Error("CreateDeviceModelUnknownControlledProperty test failed:" + err.Error())
+		_, err := db.CreateDeviceModel(deviceModel)
+		if err == nil || strings.Compare(err.Error(), "Controlled property is not supported: Unable to find all controlled properties [spaceship]") != 0 {
+			t.Error("CreateDeviceModelUnknownControlledProperty test failed:" + err.Error())
+		}
 	}
 }
 
