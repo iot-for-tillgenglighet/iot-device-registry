@@ -9,8 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
-
+	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/logging"
 	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/repositories/models"
 	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging"
 	"github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/datamodels/fiware"
@@ -19,7 +18,6 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	log.SetFormatter(&log.JSONFormatter{})
 	os.Exit(m.Run())
 }
 
@@ -27,8 +25,9 @@ func TestThatCreateEntityDoesNotAcceptUnknownBody(t *testing.T) {
 	bodyContents := []byte("{\"json\":\"json\"}")
 	req, _ := http.NewRequest("POST", createURL("/ngsi-ld/v1/entities"), bytes.NewBuffer(bodyContents))
 	w := httptest.NewRecorder()
+	log := logging.NewLogger()
 
-	ctxreg := createContextRegistry(nil, nil)
+	ctxreg := createContextRegistry(log, nil, nil)
 	ngsi.NewCreateEntityHandler(ctxreg).ServeHTTP(w, req)
 
 	if w.Code != http.StatusBadRequest {
@@ -40,11 +39,12 @@ func TestThatCreateEntityDoesNotAcceptUnknownDeviceModel(t *testing.T) {
 	device := fiware.NewDevice("deviceID", "")
 	device.RefDeviceModel, _ = ngsitypes.NewDeviceModelRelationship("urn:ngsi-ld:DeviceModel:hotchip")
 	jsonBytes, _ := json.Marshal(device)
+	log := logging.NewLogger()
 
 	req, _ := http.NewRequest("POST", createURL("/ngsi-ld/v1/entities"), bytes.NewBuffer(jsonBytes))
 	w := httptest.NewRecorder()
 
-	ctxreg := createContextRegistry(nil, nil)
+	ctxreg := createContextRegistry(log, nil, nil)
 	ngsi.NewCreateEntityHandler(ctxreg).ServeHTTP(w, req)
 
 	if w.Code != http.StatusBadRequest {
@@ -58,11 +58,12 @@ func TestThatCreateEntityStoresCorrectDevice(t *testing.T) {
 	device := fiware.NewDevice(deviceID, "")
 	device.RefDeviceModel, _ = ngsitypes.NewDeviceModelRelationship("urn:ngsi-ld:DeviceModel:livboj")
 	jsonBytes, _ := json.Marshal(device)
+	log := logging.NewLogger()
 
 	req, _ := http.NewRequest("POST", createURL("/ngsi-ld/v1/entities"), bytes.NewBuffer(jsonBytes))
 	w := httptest.NewRecorder()
 
-	ctxreg := createContextRegistry(nil, db)
+	ctxreg := createContextRegistry(log, nil, db)
 	ngsi.NewCreateEntityHandler(ctxreg).ServeHTTP(w, req)
 
 	if db.CreateCount != 1 {
@@ -80,8 +81,9 @@ func TestThatPatchWaterTempDevicePublishesOnTheMessageQueue(t *testing.T) {
 	jsonBytes, _ := json.Marshal(createDevicePatchWithValue("sk-elt-temp-02", "t%3D12"))
 	req, _ := http.NewRequest("PATCH", createURL("/ngsi-ld/v1/entities/urn:ngsi-ld:Device:sk-elt-temp-02/attrs/"), bytes.NewBuffer(jsonBytes))
 	w := httptest.NewRecorder()
+	log := logging.NewLogger()
 
-	ctxreg := createContextRegistry(&m, nil)
+	ctxreg := createContextRegistry(log, &m, nil)
 	ngsi.NewUpdateEntityAttributesHandler(ctxreg).ServeHTTP(w, req)
 
 	if m.PublishCount != 1 {
