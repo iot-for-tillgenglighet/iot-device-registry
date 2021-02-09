@@ -3,6 +3,7 @@ package application
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -35,23 +36,6 @@ func TestThatCreateEntityDoesNotAcceptUnknownBody(t *testing.T) {
 	}
 }
 
-func TestThatCreateEntityDoesNotAcceptUnknownDeviceModel(t *testing.T) {
-	device := fiware.NewDevice("deviceID", "")
-	device.RefDeviceModel, _ = ngsitypes.NewDeviceModelRelationship("urn:ngsi-ld:DeviceModel:hotchip")
-	jsonBytes, _ := json.Marshal(device)
-	log := logging.NewLogger()
-
-	req, _ := http.NewRequest("POST", createURL("/ngsi-ld/v1/entities"), bytes.NewBuffer(jsonBytes))
-	w := httptest.NewRecorder()
-
-	ctxreg := createContextRegistry(log, nil, nil)
-	ngsi.NewCreateEntityHandler(ctxreg).ServeHTTP(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Error("CreateEntity did not return a BadRequest status.")
-	}
-}
-
 func TestThatCreateEntityStoresCorrectDevice(t *testing.T) {
 	db := &dbMock{}
 	deviceID := "urn:ngsi-ld:Device:deviceID"
@@ -66,12 +50,56 @@ func TestThatCreateEntityStoresCorrectDevice(t *testing.T) {
 	ctxreg := createContextRegistry(log, nil, db)
 	ngsi.NewCreateEntityHandler(ctxreg).ServeHTTP(w, req)
 
-	if db.CreateCount != 1 {
-		t.Error("CreateCount should be 1, but was ", db.CreateCount, "!")
+	if db.createCount != 1 {
+		t.Error("CreateCount should be 1, but was ", db.createCount, "!")
 	}
 
-	if db.Device.ID != deviceID {
-		t.Error("DeviceID should be " + deviceID + ", but was " + db.Device.ID)
+	if db.device.ID != deviceID {
+		t.Error("DeviceID should be " + deviceID + ", but was " + db.device.ID)
+	}
+}
+
+func TestThatCreateEntityStoresCorrectDeviceModel(t *testing.T) {
+	db := &dbMock{}
+
+	categories := []string{"sensor"}
+	deviceModel := fiware.NewDeviceModel("badtemperatur", categories)
+	deviceModel.ControlledProperty = ngsitypes.NewTextListProperty([]string{"temperature"})
+
+	jsonBytes, _ := json.Marshal(deviceModel)
+	log := logging.NewLogger()
+
+	req, _ := http.NewRequest("POST", createURL("/ngsi-ld/v1/entities"), bytes.NewBuffer(jsonBytes))
+	w := httptest.NewRecorder()
+
+	ctxreg := createContextRegistry(log, nil, db)
+	ngsi.NewCreateEntityHandler(ctxreg).ServeHTTP(w, req)
+
+	if db.createCount != 1 {
+		t.Error("CreateCount should be 1, but was ", db.createCount, "!")
+	}
+}
+
+func TestThatCreateEntityFailsOnUnknownEntity(t *testing.T) {
+	db := &dbMock{
+		createDeviceModelError: errors.New("test"),
+	}
+
+	categories := []string{"sensor"}
+	deviceModel := fiware.NewDeviceModel("badtemperatur", categories)
+	deviceModel.ControlledProperty = ngsitypes.NewTextListProperty([]string{"temperature"})
+
+	jsonBytes, _ := json.Marshal(deviceModel)
+	log := logging.NewLogger()
+
+	req, _ := http.NewRequest("POST", createURL("/ngsi-ld/v1/entities"), bytes.NewBuffer(jsonBytes))
+	w := httptest.NewRecorder()
+
+	ctxreg := createContextRegistry(log, nil, db)
+	ngsi.NewCreateEntityHandler(ctxreg).ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Error("CreateEntity did not return a BadRequest status.")
 	}
 }
 
@@ -122,17 +150,26 @@ func (m *msgMock) PublishOnTopic(message messaging.TopicMessage) error {
 }
 
 type dbMock struct {
-	CreateCount uint32
-	Device      *fiware.Device
+	createCount            uint32
+	device                 *fiware.Device
+	deviceModel            *fiware.DeviceModel
+	createDeviceModelError error
 }
 
 func (db *dbMock) CreateDevice(device *fiware.Device) (*models.Device, error) {
-	db.CreateCount++
-	db.Device = device
+	db.createCount++
+	db.device = device
 
 	return nil, nil
 }
 
 func (db *dbMock) CreateDeviceModel(deviceModel *fiware.DeviceModel) (*models.DeviceModel, error) {
+	if db.createDeviceModelError != nil {
+		return nil, db.createDeviceModelError
+	}
+
+	db.createCount++
+	db.deviceModel = deviceModel
+
 	return nil, nil
 }

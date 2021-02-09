@@ -126,25 +126,32 @@ func (cs contextSource) ProvidesEntitiesWithMatchingID(entityID string) bool {
 }
 
 func (cs *contextSource) CreateEntity(typeName, entityID string, req ngsi.Request) error {
-	device := &fiware.Device{}
-	err := req.DecodeBodyInto(device)
-	if err != nil {
-		cs.log.Errorf("Failed to decode body into Device: %s", err.Error())
-		return err
-	}
+	var err error
 
-	deviceModel := "none"
-	if device.RefDeviceModel != nil {
-		deviceModel = device.RefDeviceModel.Object
-	}
+	if typeName == "Device" {
+		device := &fiware.Device{}
+		err = req.DecodeBodyInto(device)
+		if err != nil {
+			cs.log.Errorf("Failed to decode body into Device: %s", err.Error())
+			return err
+		}
 
-	if deviceModelIsOfUnknownType(deviceModel) {
-		errorMessage := fmt.Sprintf("Adding devices of type " + deviceModel + " is not supported.")
+		_, err = cs.db.CreateDevice(device)
+
+	} else if typeName == "DeviceModel" {
+		deviceModel := &fiware.DeviceModel{}
+		err = req.DecodeBodyInto(deviceModel)
+		if err != nil {
+			cs.log.Errorf("Failed to decode body into DeviceModel: %s", err.Error())
+			return err
+		}
+		_, err = cs.db.CreateDeviceModel(deviceModel)
+
+	} else {
+		errorMessage := fmt.Sprintf("Entity of type  " + typeName + " is not supported.")
 		cs.log.Errorf(errorMessage)
 		return errors.New(errorMessage)
 	}
-
-	_, err = cs.db.CreateDevice(device)
 
 	return err
 }
@@ -168,7 +175,14 @@ func (cs contextSource) ProvidesAttribute(attributeName string) bool {
 }
 
 func (cs contextSource) ProvidesType(typeName string) bool {
-	return typeName == "Device"
+
+	if typeName == "Device" {
+		return typeName == "Device"
+	} else if typeName == "DeviceModel" {
+		return typeName == "DeviceModel"
+	}
+
+	return false
 }
 
 func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Request) error {
@@ -195,18 +209,6 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Reques
 	cs.devices = append(cs.devices, *fiware.NewDevice(shortEntityID, updateSource.Value.Value))
 
 	return nil
-}
-
-func deviceModelIsOfUnknownType(deviceModel string) bool {
-	knownTypes := []string{"urn:ngsi-ld:DeviceModel:badtemperatur", "urn:ngsi-ld:DeviceModel:livboj"}
-
-	for _, kt := range knownTypes {
-		if deviceModel == kt {
-			return false
-		}
-	}
-
-	return true
 }
 
 //This is a hack to decode the value and send it as a telemetry message over RabbitMQ for PoC purposes.
