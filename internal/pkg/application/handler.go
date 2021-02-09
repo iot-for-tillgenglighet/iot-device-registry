@@ -26,6 +26,7 @@ import (
 
 	"github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/datamodels/fiware"
 	ngsi "github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/ngsi-ld"
+	ngsitypes "github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/ngsi-ld/types"
 )
 
 type RequestRouter struct {
@@ -160,8 +161,12 @@ func (cs *contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntiti
 
 	var err error
 
-	for _, device := range cs.devices {
-		err = callback(device)
+	devices, err := cs.db.GetDevices()
+
+	for _, device := range devices {
+		fiwareDevice := fiware.NewDevice(device.DeviceID, device.Value)
+		fiwareDevice.RefDeviceModel, _ = ngsitypes.NewDeviceModelRelationship(device.DeviceModel.DeviceModelID)
+		err = callback(fiwareDevice)
 		if err != nil {
 			break
 		}

@@ -9,6 +9,7 @@ type Device struct {
 	DeviceID      string `gorm:"unique"`
 	Latitude      float64
 	Longitude     float64
+	Value         string
 	DeviceModelID uint
 	DeviceModel   DeviceModel
 }

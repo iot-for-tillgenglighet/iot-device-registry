@@ -108,6 +108,19 @@ func TestThatCreateDeviceModelFailsOnUnknownControlledProperty(t *testing.T) {
 	}
 }
 
+func TestGetDevices(t *testing.T) {
+	if db, ok := newDatabaseForTest(t); ok {
+		devices, err := db.GetDevices()
+		if err != nil {
+			t.Error("Failed")
+		}
+
+		if len(devices) != 0 {
+			t.Error("Unexpected")
+		}
+	}
+}
+
 func newDatabaseForTest(t *testing.T) (Datastore, bool) {
 	log := logging.NewLogger()
 	db, err := NewDatabaseConnection(NewSQLiteConnector(), log)
