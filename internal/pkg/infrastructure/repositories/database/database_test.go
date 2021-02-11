@@ -17,25 +17,27 @@ func TestMain(m *testing.M) {
 
 func TestThatCreateDeviceReturnsErrorIfDeviceModelIsNil(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
-		device := fiware.NewDevice("ID1", "Value")
+		device := newDevice()
 
 		_, err := db.CreateDevice(device)
-		if err == nil || strings.Compare(err.Error(), "CreateDevice requires non-empty device model") != 0 {
-			t.Error(err.Error())
+
+		errMsg := getErrorMessageOrString(err, "nil")
+		if strings.Compare(errMsg, "CreateDevice requires non-empty device model") != 0 {
+			t.Errorf("Unexpected error: %s", errMsg)
 		}
 	}
 }
 
 func TestThatCreateDeviceFailsWithUnknownDeviceModel(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
-		device := fiware.NewDevice("ID2", "Value")
-		var err error
+		device := newDevice()
+		device.RefDeviceModel, _ = types.NewDeviceModelRelationship("urn:ngsi-ld:DeviceModel:nosuchthing")
 
-		device.RefDeviceModel, err = types.NewDeviceModelRelationship("urn:ngsi-ld:DeviceModel:refDeviceModel")
+		_, err := db.CreateDevice(device)
 
-		_, err = db.CreateDevice(device)
-		if err == nil || strings.Compare(err.Error(), "No DeviceModel found matching urn:ngsi-ld:DeviceModel:refDeviceModel") != 0 {
-			t.Error(err.Error())
+		errMsg := getErrorMessageOrString(err, "nil")
+		if strings.Compare(errMsg, "No DeviceModel found matching urn:ngsi-ld:DeviceModel:nosuchthing") != 0 {
+			t.Errorf("Unexpected error: %s", errMsg)
 		}
 	}
 }
@@ -47,9 +49,8 @@ func TestThatCreateDeviceModelStoresAllValues(t *testing.T) {
 		manufacturerName := "samsung"
 		name := "ourModel"
 
-		categories := []string{"temperature"}
-		deviceModel := fiware.NewDeviceModel("ID3", categories)
-		deviceModel.ControlledProperty = types.NewTextListProperty([]string{"temperature"})
+		deviceModel := newDeviceModel()
+
 		deviceModel.BrandName = types.NewTextProperty(brandName)
 		deviceModel.ModelName = types.NewTextProperty(modelName)
 		deviceModel.ManufacturerName = types.NewTextProperty(manufacturerName)
@@ -73,57 +74,50 @@ func TestThatCreateDeviceModelStoresAllValues(t *testing.T) {
 	}
 }
 
-func checkStringValue(t *testing.T, property, lhs, rhs string) {
-	if strings.Compare(lhs, rhs) != 0 {
-		t.Errorf("Check string failed for property %s: %s != %s", property, lhs, rhs)
-	}
-}
-
 func TestGetDeviceModels(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
-		_, err := db.GetDeviceModels()
-		if err != nil {
-			t.Error("Failed to get DeviceModels")
+		if _, _, ok := seedNewDeviceModel(t, db); ok {
+
+			models, _ := db.GetDeviceModels()
+
+			if len(models) != 1 {
+				t.Errorf("Returned number (%d) is different from expected %d.", len(models), 1)
+			}
 		}
 	}
 }
 
 func TestGetDeviceModelFromID(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
-		categories := []string{"temperature"}
-		deviceModel := fiware.NewDeviceModel("ID4", categories)
-		deviceModel.ControlledProperty = types.NewTextListProperty([]string{"temperature"})
+		if key, modelID, ok := seedNewDeviceModel(t, db); ok {
 
-		dM, _ := db.CreateDeviceModel(deviceModel)
+			deviceModel, err := db.GetDeviceModelFromID(key)
+			if err != nil {
+				t.Error("GetDeviceModelFromID failed with error:", err.Error())
+			}
 
-		dM2, err := db.GetDeviceModelFromID(dM.ID)
-		if err != nil {
-			t.Error("GetDeviceModelFromID failed with error:", err.Error())
-		}
-
-		if strings.Compare(dM.DeviceModelID, dM2.DeviceModelID) != 0 {
-			t.Error(fmt.Sprintf("DeviceModelFromID returned incorrect DeviceModel \"%s\" != \"%s\"", dM.DeviceModelID, dM2.DeviceModelID))
+			if strings.Compare(modelID, deviceModel.DeviceModelID) != 0 {
+				t.Error(fmt.Sprintf("DeviceModelFromID returned incorrect DeviceModel \"%s\" != \"%s\"",
+					modelID, deviceModel.DeviceModelID,
+				))
+			}
 		}
 	}
 }
 
 func TestCreateDevice(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
-		categories := []string{"T"}
-		deviceModel := fiware.NewDeviceModel("ID5", categories)
-		deviceModel.ControlledProperty = types.NewTextListProperty([]string{"temperature"})
+		if _, modelID, ok := seedNewDeviceModel(t, db); ok {
 
-		_, err := db.CreateDeviceModel(deviceModel)
-		if err != nil {
-			t.Error("CreateDevice test failed to create device model:" + err.Error())
-		}
+			var err error
+			device := newDevice()
+			device.RefDeviceModel, err = types.NewDeviceModelRelationship(modelID)
 
-		device := fiware.NewDevice("ID6", "Value")
+			_, err = db.CreateDevice(device)
 
-		device.RefDeviceModel, err = types.NewDeviceModelRelationship(deviceModel.ID)
-		_, err = db.CreateDevice(device)
-		if err != nil {
-			t.Error("CreateDevice test failed:" + err.Error())
+			if err != nil {
+				t.Error("CreateDevice test failed:" + err.Error())
+			}
 		}
 	}
 }
@@ -141,9 +135,10 @@ func TestCreateDeviceModelForWaterTemperatureDevice(t *testing.T) {
 		}
 
 		device := fiware.NewDevice("badtemperatur", "18.5")
-
 		device.RefDeviceModel, err = types.NewDeviceModelRelationship(deviceModel.ID)
+
 		_, err = db.CreateDevice(device)
+
 		if err != nil {
 			t.Error("CreateDevice test failed:" + err.Error())
 		}
@@ -152,38 +147,46 @@ func TestCreateDeviceModelForWaterTemperatureDevice(t *testing.T) {
 
 func TestThatCreateDeviceModelFailsOnUnknownControlledProperty(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
-		categories := []string{"sensor"}
-		deviceModel := fiware.NewDeviceModel("badtemperatur", categories)
+		deviceModel := newDeviceModel()
 		deviceModel.ControlledProperty = types.NewTextListProperty([]string{"spaceship"})
 
 		_, err := db.CreateDeviceModel(deviceModel)
-		if err == nil || strings.Compare(err.Error(), "Controlled property is not supported: Unable to find all controlled properties [spaceship]") != 0 {
-			t.Error("CreateDeviceModelUnknownControlledProperty test failed:" + err.Error())
+
+		errMsg := getErrorMessageOrString(err, "nil")
+		if strings.Compare(errMsg, "Controlled property is not supported: Unable to find all controlled properties [spaceship]") != 0 {
+			t.Error("CreateDeviceModelUnknownControlledProperty test failed:" + errMsg)
 		}
 	}
 }
 
 func TestGetDevices(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
-		categories := []string{"T"}
-		deviceModel := fiware.NewDeviceModel("ID7", categories)
-		deviceModel.ControlledProperty = types.NewTextListProperty([]string{"temperature"})
+		if _, modelID, ok := seedNewDeviceModel(t, db); ok {
+			device := newDevice()
+			device.RefDeviceModel, _ = types.NewDeviceModelRelationship(modelID)
+			db.CreateDevice(device)
 
-		_, err := db.CreateDeviceModel(deviceModel)
-		if err != nil {
-			t.Error("CreateDevice test failed to create device model:" + err.Error())
-		}
+			devices, _ := db.GetDevices()
 
-		device := fiware.NewDevice("ID8", "Value")
-
-		device.RefDeviceModel, err = types.NewDeviceModelRelationship(deviceModel.ID)
-		_, err = db.CreateDevice(device)
-
-		_, err = db.GetDevices()
-		if err != nil {
-			t.Error("Failed")
+			if len(devices) != 1 {
+				t.Errorf("Number of returned devices (%d) does not match expected %d.", len(devices), 1)
+			}
 		}
 	}
+}
+
+func checkStringValue(t *testing.T, property, lhs, rhs string) {
+	if strings.Compare(lhs, rhs) != 0 {
+		t.Errorf("Check string failed for property %s: %s != %s", property, lhs, rhs)
+	}
+}
+
+func getErrorMessageOrString(err error, orString string) string {
+	if err != nil {
+		return err.Error()
+	}
+
+	return orString
 }
 
 func newDatabaseForTest(t *testing.T) (Datastore, bool) {
@@ -196,4 +199,37 @@ func newDatabaseForTest(t *testing.T) (Datastore, bool) {
 	}
 
 	return db, true
+}
+
+var numCreatedDevices int = 0
+
+func newDevice() *fiware.Device {
+	id := fmt.Sprintf("ID%d", numCreatedDevices)
+	numCreatedDevices++
+
+	return fiware.NewDevice(id, "on")
+}
+
+var numCreatedDeviceModels int = 0
+
+func newDeviceModel() *fiware.DeviceModel {
+	id := fmt.Sprintf("ID%d", numCreatedDeviceModels)
+	numCreatedDeviceModels++
+
+	categories := []string{"T"}
+	deviceModel := fiware.NewDeviceModel(id, categories)
+	deviceModel.ControlledProperty = types.NewTextListProperty([]string{"temperature"})
+
+	return deviceModel
+}
+
+func seedNewDeviceModel(t *testing.T, db Datastore) (uint, string, bool) {
+	deviceModel, err := db.CreateDeviceModel(newDeviceModel())
+
+	if err != nil {
+		t.Errorf("Failed to seed device model in database: %s", err.Error())
+		return 0, "", false
+	}
+
+	return deviceModel.ID, deviceModel.DeviceModelID, true
 }
