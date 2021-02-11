@@ -99,7 +99,7 @@ func NewPostgreSQLConnector(log logging.Logger) ConnectorFunc {
 //NewSQLiteConnector opens a connection to a local sqlite database
 func NewSQLiteConnector() ConnectorFunc {
 	return func() (*gorm.DB, error) {
-		db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{
+		db, err := gorm.Open(sqlite.Open("file::memory:"), &gorm.Config{
 			Logger: logger.Default.LogMode(logger.Silent),
 		})
 
