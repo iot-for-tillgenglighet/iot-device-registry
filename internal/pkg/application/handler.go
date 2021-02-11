@@ -161,14 +161,40 @@ func (cs *contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntiti
 
 	var err error
 
-	devices, err := cs.db.GetDevices()
+	if query == nil {
+		return errors.New("GetEntities: query may not be nil")
+	}
 
-	for _, device := range devices {
-		fiwareDevice := fiware.NewDevice(device.DeviceID, device.Value)
-		fiwareDevice.RefDeviceModel, _ = ngsitypes.NewDeviceModelRelationship(device.DeviceModel.DeviceModelID)
-		err = callback(fiwareDevice)
-		if err != nil {
-			break
+	for _, typeName := range query.EntityTypes() {
+		if typeName == "Device" {
+			devices, err := cs.db.GetDevices()
+			if err != nil {
+				return fmt.Errorf("Unable to get Devices: %s", err.Error())
+			}
+
+			for _, device := range devices {
+				fiwareDevice := fiware.NewDevice(device.DeviceID, device.Value)
+				deviceModel, err := cs.db.GetDeviceModelFromID(device.DeviceModelID)
+
+				fiwareDevice.RefDeviceModel, _ = ngsitypes.NewDeviceModelRelationship(deviceModel.DeviceModelID)
+				err = callback(fiwareDevice)
+				if err != nil {
+					break
+				}
+			}
+		} else if typeName == "DeviceModel" {
+			deviceModels, err := cs.db.GetDeviceModels()
+			if err != nil {
+				return fmt.Errorf("Unable to get DeviceModels: %s", err.Error())
+			}
+
+			for _, deviceModel := range deviceModels {
+				fiwareDeviceModel := fiware.NewDeviceModel(deviceModel.DeviceModelID, []string{deviceModel.Category})
+				err = callback(fiwareDeviceModel)
+				if err != nil {
+					break
+				}
+			}
 		}
 	}
 

@@ -23,6 +23,8 @@ type Datastore interface {
 	CreateDevice(device *fiware.Device) (*models.Device, error)
 	CreateDeviceModel(deviceModel *fiware.DeviceModel) (*models.DeviceModel, error)
 	GetDevices() ([]models.Device, error)
+	GetDeviceModels() ([]models.DeviceModel, error)
+	GetDeviceModelFromID(id uint) (*models.DeviceModel, error)
 }
 
 var dbCtxKey = &databaseContextKey{"database"}
@@ -201,7 +203,10 @@ func (db *myDB) CreateDevice(src *fiware.Device) (*models.Device, error) {
 		device.Longitude = src.Location.Value.Coordinates[1]
 	}
 
-	db.impl.Debug().Create(device)
+	result := db.impl.Debug().Create(device)
+	if result.Error != nil {
+		return nil, result.Error
+	}
 
 	return device, nil
 }
@@ -223,7 +228,10 @@ func (db *myDB) CreateDeviceModel(src *fiware.DeviceModel) (*models.DeviceModel,
 		ControlledProperties: controlledProperties,
 	}
 
-	db.impl.Debug().Create(deviceModel)
+	result := db.impl.Debug().Create(deviceModel)
+	if result.Error != nil {
+		return nil, result.Error
+	}
 
 	return deviceModel, nil
 }
@@ -236,6 +244,25 @@ func (db *myDB) GetDevices() ([]models.Device, error) {
 	}
 
 	return devices, nil
+}
+
+func (db *myDB) GetDeviceModels() ([]models.DeviceModel, error) {
+	deviceModels := []models.DeviceModel{}
+	result := db.impl.Find(&deviceModels)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return deviceModels, nil
+}
+
+func (db *myDB) GetDeviceModelFromID(id uint) (*models.DeviceModel, error) {
+	deviceModel := &models.DeviceModel{}
+	result := db.impl.Find(deviceModel, id)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return deviceModel, nil
 }
 
 func (db *myDB) getControlledProperties(properties []string) ([]models.DeviceControlledProperty, error) {

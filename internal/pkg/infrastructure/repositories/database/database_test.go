@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -16,7 +17,7 @@ func TestMain(m *testing.M) {
 
 func TestThatCreateDeviceReturnsErrorIfDeviceModelIsNil(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
-		device := fiware.NewDevice("ID", "Value")
+		device := fiware.NewDevice("ID1", "Value")
 
 		_, err := db.CreateDevice(device)
 		if err == nil || strings.Compare(err.Error(), "CreateDevice requires non-empty device model") != 0 {
@@ -27,7 +28,7 @@ func TestThatCreateDeviceReturnsErrorIfDeviceModelIsNil(t *testing.T) {
 
 func TestThatCreateDeviceFailsWithUnknownDeviceModel(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
-		device := fiware.NewDevice("ID", "Value")
+		device := fiware.NewDevice("ID2", "Value")
 		var err error
 
 		device.RefDeviceModel, err = types.NewDeviceModelRelationship("urn:ngsi-ld:DeviceModel:refDeviceModel")
@@ -42,7 +43,7 @@ func TestThatCreateDeviceFailsWithUnknownDeviceModel(t *testing.T) {
 func TestCreateDeviceModel(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
 		categories := []string{"temperature"}
-		deviceModel := fiware.NewDeviceModel("ID", categories)
+		deviceModel := fiware.NewDeviceModel("ID3", categories)
 		deviceModel.ControlledProperty = types.NewTextListProperty([]string{"temperature"})
 
 		_, err := db.CreateDeviceModel(deviceModel)
@@ -52,10 +53,38 @@ func TestCreateDeviceModel(t *testing.T) {
 	}
 }
 
+func TestGetDeviceModels(t *testing.T) {
+	if db, ok := newDatabaseForTest(t); ok {
+		_, err := db.GetDeviceModels()
+		if err != nil {
+			t.Error("Failed to get DeviceModels")
+		}
+	}
+}
+
+func TestGetDeviceModelFromID(t *testing.T) {
+	if db, ok := newDatabaseForTest(t); ok {
+		categories := []string{"temperature"}
+		deviceModel := fiware.NewDeviceModel("ID4", categories)
+		deviceModel.ControlledProperty = types.NewTextListProperty([]string{"temperature"})
+
+		dM, _ := db.CreateDeviceModel(deviceModel)
+
+		dM2, err := db.GetDeviceModelFromID(dM.ID)
+		if err != nil {
+			t.Error("GetDeviceModelFromID failed with error:", err.Error())
+		}
+
+		if strings.Compare(dM.DeviceModelID, dM2.DeviceModelID) != 0 {
+			t.Error(fmt.Sprintf("DeviceModelFromID returned incorrect DeviceModel \"%s\" != \"%s\"", dM.DeviceModelID, dM2.DeviceModelID))
+		}
+	}
+}
+
 func TestCreateDevice(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
 		categories := []string{"T"}
-		deviceModel := fiware.NewDeviceModel("ID", categories)
+		deviceModel := fiware.NewDeviceModel("ID5", categories)
 		deviceModel.ControlledProperty = types.NewTextListProperty([]string{"temperature"})
 
 		_, err := db.CreateDeviceModel(deviceModel)
@@ -63,7 +92,7 @@ func TestCreateDevice(t *testing.T) {
 			t.Error("CreateDevice test failed to create device model:" + err.Error())
 		}
 
-		device := fiware.NewDevice("ID", "Value")
+		device := fiware.NewDevice("ID6", "Value")
 
 		device.RefDeviceModel, err = types.NewDeviceModelRelationship(deviceModel.ID)
 		_, err = db.CreateDevice(device)
@@ -110,13 +139,23 @@ func TestThatCreateDeviceModelFailsOnUnknownControlledProperty(t *testing.T) {
 
 func TestGetDevices(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
-		devices, err := db.GetDevices()
+		categories := []string{"T"}
+		deviceModel := fiware.NewDeviceModel("ID7", categories)
+		deviceModel.ControlledProperty = types.NewTextListProperty([]string{"temperature"})
+
+		_, err := db.CreateDeviceModel(deviceModel)
 		if err != nil {
-			t.Error("Failed")
+			t.Error("CreateDevice test failed to create device model:" + err.Error())
 		}
 
-		if len(devices) != 0 {
-			t.Error("Unexpected")
+		device := fiware.NewDevice("ID8", "Value")
+
+		device.RefDeviceModel, err = types.NewDeviceModelRelationship(deviceModel.ID)
+		_, err = db.CreateDevice(device)
+
+		_, err = db.GetDevices()
+		if err != nil {
+			t.Error("Failed")
 		}
 	}
 }

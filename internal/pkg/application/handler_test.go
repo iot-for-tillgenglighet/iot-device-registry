@@ -177,3 +177,11 @@ func (db *dbMock) CreateDeviceModel(deviceModel *fiware.DeviceModel) (*models.De
 func (db *dbMock) GetDevices() ([]models.Device, error) {
 	return []models.Device{}, nil
 }
+
+func (db *dbMock) GetDeviceModels() ([]models.DeviceModel, error) {
+	return []models.DeviceModel{}, nil
+}
+
+func (db *dbMock) GetDeviceModelFromID(id uint) (*models.DeviceModel, error) {
+	return nil, nil
+}
