@@ -228,6 +228,22 @@ func (db *myDB) CreateDeviceModel(src *fiware.DeviceModel) (*models.DeviceModel,
 		ControlledProperties: controlledProperties,
 	}
 
+	if src.BrandName != nil {
+		deviceModel.BrandName = src.BrandName.Value
+	}
+
+	if src.ModelName != nil {
+		deviceModel.ModelName = src.ModelName.Value
+	}
+
+	if src.ManufacturerName != nil {
+		deviceModel.ManufacturerName = src.ManufacturerName.Value
+	}
+
+	if src.Name != nil {
+		deviceModel.Name = src.Name.Value
+	}
+
 	result := db.impl.Debug().Create(deviceModel)
 	if result.Error != nil {
 		return nil, result.Error

@@ -40,16 +40,42 @@ func TestThatCreateDeviceFailsWithUnknownDeviceModel(t *testing.T) {
 	}
 }
 
-func TestCreateDeviceModel(t *testing.T) {
+func TestThatCreateDeviceModelStoresAllValues(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
+		brandName := "galaxy"
+		modelName := "S20"
+		manufacturerName := "samsung"
+		name := "ourModel"
+
 		categories := []string{"temperature"}
 		deviceModel := fiware.NewDeviceModel("ID3", categories)
 		deviceModel.ControlledProperty = types.NewTextListProperty([]string{"temperature"})
+		deviceModel.BrandName = types.NewTextProperty(brandName)
+		deviceModel.ModelName = types.NewTextProperty(modelName)
+		deviceModel.ManufacturerName = types.NewTextProperty(manufacturerName)
+		deviceModel.Name = types.NewTextProperty(name)
 
-		_, err := db.CreateDeviceModel(deviceModel)
+		createdDeviceModel, err := db.CreateDeviceModel(deviceModel)
 		if err != nil {
 			t.Error("CreateDeviceModel test failed:" + err.Error())
 		}
+
+		// get deviceModel and compare
+		createdDeviceModel, err = db.GetDeviceModelFromID(createdDeviceModel.ID)
+		if err != nil {
+			t.Error("GetDeviceModelFromID failed:" + err.Error())
+		}
+
+		checkStringValue(t, "brand name", createdDeviceModel.BrandName, brandName)
+		checkStringValue(t, "model name", createdDeviceModel.ModelName, modelName)
+		checkStringValue(t, "manufacturer name", createdDeviceModel.ManufacturerName, manufacturerName)
+		checkStringValue(t, "name", createdDeviceModel.Name, name)
+	}
+}
+
+func checkStringValue(t *testing.T, property, lhs, rhs string) {
+	if strings.Compare(lhs, rhs) != 0 {
+		t.Errorf("Check string failed for property %s: %s != %s", property, lhs, rhs)
 	}
 }
 
