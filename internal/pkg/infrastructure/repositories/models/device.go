@@ -1,9 +1,12 @@
 package models
 
 import (
+	"time"
+
 	"gorm.io/gorm"
 )
 
+//Device is the database model to store devices in our database
 type Device struct {
 	gorm.Model
 	DeviceID      string `gorm:"unique"`
@@ -24,6 +27,15 @@ type DeviceModel struct {
 	Name                 string
 	Category             string
 	ControlledProperties []DeviceControlledProperty `gorm:"many2many:devicemodel_ctrlprops;"`
+}
+
+//DeviceValue stores the value from a point in time (observedAt)
+type DeviceValue struct {
+	gorm.Model
+	DeviceID                   uint
+	DeviceControlledPropertyID uint
+	Value                      string
+	ObservedAt                 time.Time
 }
 
 //DeviceControlledProperty stores different properties that devices can control/sense/meter/whatever

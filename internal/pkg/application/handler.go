@@ -119,7 +119,6 @@ type contextSource struct {
 	db        database.Datastore
 	log       logging.Logger
 	messenger MessagingContext
-	devices   []fiware.Device
 }
 
 func (cs contextSource) ProvidesEntitiesWithMatchingID(entityID string) bool {
@@ -230,16 +229,7 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Reques
 
 	postWaterTempTelemetryIfDeviceIsAWaterTempDevice(cs.messenger, shortEntityID, updateSource.Value.Value)
 
-	for index, device := range cs.devices {
-		if device.ID == entityID {
-			cs.devices[index].Value.Value = updateSource.Value.Value
-			return nil
-		}
-	}
-
-	cs.devices = append(cs.devices, *fiware.NewDevice(shortEntityID, updateSource.Value.Value))
-
-	return nil
+	return cs.db.UpdateDeviceValue(entityID, updateSource.Value.Value)
 }
 
 //This is a hack to decode the value and send it as a telemetry message over RabbitMQ for PoC purposes.

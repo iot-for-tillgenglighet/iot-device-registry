@@ -175,6 +175,19 @@ func TestGetDevices(t *testing.T) {
 	}
 }
 
+func TestUpdateDeviceValue(t *testing.T) {
+	if db, ok := newDatabaseForTest(t); ok {
+		if _, deviceID, ok := seedNewDevice(t, db); ok {
+
+			err := db.UpdateDeviceValue(deviceID, "t=12")
+
+			if err != nil {
+				t.Errorf("Failed to update device value: %s", err.Error())
+			}
+		}
+	}
+}
+
 func checkStringValue(t *testing.T, property, lhs, rhs string) {
 	if strings.Compare(lhs, rhs) != 0 {
 		t.Errorf("Check string failed for property %s: %s != %s", property, lhs, rhs)
@@ -221,6 +234,23 @@ func newDeviceModel() *fiware.DeviceModel {
 	deviceModel.ControlledProperty = types.NewTextListProperty([]string{"temperature"})
 
 	return deviceModel
+}
+
+func seedNewDevice(t *testing.T, db Datastore) (uint, string, bool) {
+	if _, modelID, ok := seedNewDeviceModel(t, db); ok {
+		d := newDevice()
+		d.RefDeviceModel, _ = types.NewDeviceModelRelationship(modelID)
+		device, err := db.CreateDevice(d)
+
+		if err != nil {
+			t.Errorf("Failed to seed new device in database: %s", err.Error())
+			return 0, "", false
+		}
+
+		return device.ID, device.DeviceID, true
+	}
+
+	return 0, "", false
 }
 
 func seedNewDeviceModel(t *testing.T, db Datastore) (uint, string, bool) {

@@ -185,3 +185,7 @@ func (db *dbMock) GetDeviceModels() ([]models.DeviceModel, error) {
 func (db *dbMock) GetDeviceModelFromID(id uint) (*models.DeviceModel, error) {
 	return nil, nil
 }
+
+func (db *dbMock) UpdateDeviceValue(deviceID, value string) error {
+	return nil
+}

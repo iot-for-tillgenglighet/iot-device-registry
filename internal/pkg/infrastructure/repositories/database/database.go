@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/logging"
@@ -25,6 +26,7 @@ type Datastore interface {
 	GetDevices() ([]models.Device, error)
 	GetDeviceModels() ([]models.DeviceModel, error)
 	GetDeviceModelFromID(id uint) (*models.DeviceModel, error)
+	UpdateDeviceValue(deviceID, value string) error
 }
 
 var dbCtxKey = &databaseContextKey{"database"}
@@ -124,6 +126,7 @@ func NewDatabaseConnection(connect ConnectorFunc, log logging.Logger) (Datastore
 
 	db.impl.Debug().AutoMigrate(&models.DeviceControlledProperty{})
 	db.impl.Debug().AutoMigrate(&models.DeviceModel{})
+	db.impl.Debug().AutoMigrate(&models.DeviceValue{})
 	db.impl.Debug().AutoMigrate(&models.Device{})
 
 	db.impl.Debug().Model(&models.DeviceModel{}).Association("DeviceControlledProperty")
@@ -279,6 +282,58 @@ func (db *myDB) GetDeviceModelFromID(id uint) (*models.DeviceModel, error) {
 	}
 
 	return deviceModel, nil
+}
+
+func (db *myDB) UpdateDeviceValue(deviceID, value string) error {
+	// Make sure that we have a corresponding device ...
+	device := &models.Device{}
+	result := db.impl.Where("device_id = ?", deviceID).First(device)
+	if result.Error != nil {
+		return result.Error
+	} else if result.RowsAffected != 1 {
+		//TODO: We need error groups and introduce a NOT FOUND error here
+		return errors.New("Attempt to update non existing device")
+	}
+
+	// Get the corresponding device model
+	deviceModel := &models.DeviceModel{}
+	result = db.impl.Preload("ControlledProperties").Find(deviceModel, device.DeviceModelID)
+	if result.Error != nil {
+		return result.Error
+	} else if result.RowsAffected != 1 {
+		return fmt.Errorf("Failed to find corresponding device model for device %s", deviceID)
+	}
+
+	// Build a lookup table for controlled property abbrevations to db primary keys
+	ctrlPropMap := map[string]uint{}
+	for _, prop := range deviceModel.ControlledProperties {
+		ctrlPropMap[prop.Abbreviation] = prop.ID
+	}
+
+	// TODO: Check that all values are supported before starting to add them
+	// TODO: Figure out how to handle value = "on"
+	// TODO: Support a delta to not store too small changes
+
+	for _, v := range strings.Split(value, ";") {
+		kv := strings.Split(v, "=")
+		if len(kv) != 2 {
+			return errors.New("Failed to split value in two")
+		}
+
+		deviceValue := &models.DeviceValue{
+			DeviceID:                   device.ID,
+			DeviceControlledPropertyID: ctrlPropMap[kv[0]],
+			Value:                      kv[1],
+			ObservedAt:                 time.Now().UTC(),
+		}
+
+		result = db.impl.Debug().Create(deviceValue)
+		if result.Error != nil {
+			return result.Error
+		}
+	}
+
+	return nil
 }
 
 func (db *myDB) getControlledProperties(properties []string) ([]models.DeviceControlledProperty, error) {
