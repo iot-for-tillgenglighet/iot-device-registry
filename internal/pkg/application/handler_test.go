@@ -104,6 +104,7 @@ func TestThatCreateEntityFailsOnUnknownEntity(t *testing.T) {
 }
 
 func TestThatPatchWaterTempDevicePublishesOnTheMessageQueue(t *testing.T) {
+	db := &dbMock{}
 	m := msgMock{}
 
 	jsonBytes, _ := json.Marshal(createDevicePatchWithValue("sk-elt-temp-02", "t%3D12"))
@@ -111,7 +112,7 @@ func TestThatPatchWaterTempDevicePublishesOnTheMessageQueue(t *testing.T) {
 	w := httptest.NewRecorder()
 	log := logging.NewLogger()
 
-	ctxreg := createContextRegistry(log, &m, nil)
+	ctxreg := createContextRegistry(log, &m, db)
 	ngsi.NewUpdateEntityAttributesHandler(ctxreg).ServeHTTP(w, req)
 
 	if m.PublishCount != 1 {
