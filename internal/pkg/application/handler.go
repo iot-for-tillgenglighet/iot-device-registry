@@ -189,6 +189,11 @@ func (cs *contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntiti
 
 			for _, deviceModel := range deviceModels {
 				fiwareDeviceModel := fiware.NewDeviceModel(deviceModel.DeviceModelID, []string{deviceModel.Category})
+				fiwareDeviceModel.BrandName = ngsitypes.NewTextProperty(deviceModel.BrandName)
+				fiwareDeviceModel.ModelName = ngsitypes.NewTextProperty(deviceModel.ModelName)
+				fiwareDeviceModel.ManufacturerName = ngsitypes.NewTextProperty(deviceModel.ManufacturerName)
+				fiwareDeviceModel.Name = ngsitypes.NewTextProperty(deviceModel.Name)
+
 				err = callback(fiwareDeviceModel)
 				if err != nil {
 					break
