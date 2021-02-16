@@ -187,6 +187,15 @@ func NewDatabaseConnection(connect ConnectorFunc, log logging.Logger) (Datastore
 
 func (db *myDB) CreateDevice(src *fiware.Device) (*models.Device, error) {
 
+	// TODO: Separate fiware.Device from the repository layer so that we do not
+	// have to deal with ID strings like this
+	if strings.HasPrefix(src.ID, "urn:ngsi-ld:Device:") == false {
+		return nil, fmt.Errorf("device id %s must start with \"urn:ngsi-ld:Device:\"", src.ID)
+	}
+
+	// Truncate the leading "urn:ngsi-ld:Device:" from the device id string
+	shortDeviceID := src.ID[19:]
+
 	if src.RefDeviceModel == nil {
 		return nil, fmt.Errorf("CreateDevice requires non-empty device model")
 	}
@@ -197,7 +206,7 @@ func (db *myDB) CreateDevice(src *fiware.Device) (*models.Device, error) {
 	}
 
 	device := &models.Device{
-		DeviceID:    src.ID,
+		DeviceID:    shortDeviceID,
 		DeviceModel: *deviceModel,
 	}
 
@@ -216,6 +225,15 @@ func (db *myDB) CreateDevice(src *fiware.Device) (*models.Device, error) {
 
 func (db *myDB) CreateDeviceModel(src *fiware.DeviceModel) (*models.DeviceModel, error) {
 
+	// TODO: Separate fiware.DeviceModel from the repository layer so that we do not
+	// have to deal with ID strings like this
+	if strings.HasPrefix(src.ID, "urn:ngsi-ld:DeviceModel:") == false {
+		return nil, fmt.Errorf("device id %s must start with \"urn:ngsi-ld:DeviceModel:\"", src.ID)
+	}
+
+	// Truncate the leading "urn:ngsi-ld:DeviceModel:" from the device model id string
+	shortDeviceID := src.ID[24:]
+
 	if src.ControlledProperty == nil {
 		return nil, fmt.Errorf("Creating device model is not allowed without controlled properties")
 	}
@@ -226,7 +244,7 @@ func (db *myDB) CreateDeviceModel(src *fiware.DeviceModel) (*models.DeviceModel,
 	}
 
 	deviceModel := &models.DeviceModel{
-		DeviceModelID:        src.ID,
+		DeviceModelID:        shortDeviceID,
 		Category:             src.Category.Value[0],
 		ControlledProperties: controlledProperties,
 	}
@@ -356,8 +374,14 @@ func (db *myDB) getControlledProperties(properties []string) ([]models.DeviceCon
 }
 
 func (db *myDB) getDeviceModelFromString(deviceModelID string) (*models.DeviceModel, error) {
+	truncatedID := deviceModelID
+
+	if strings.HasPrefix(deviceModelID, "urn:ngsi-ld:DeviceModel:") {
+		truncatedID = deviceModelID[24:]
+	}
+
 	m := &models.DeviceModel{}
-	result := db.impl.Debug().Where("device_model_id = ?", deviceModelID).First(m)
+	result := db.impl.Debug().Where("device_model_id = ?", truncatedID).First(m)
 	if result.RowsAffected == 1 {
 		return m, nil
 	}

@@ -111,7 +111,7 @@ func TestCreateDevice(t *testing.T) {
 
 			var err error
 			device := newDevice()
-			device.RefDeviceModel, err = types.NewDeviceModelRelationship(modelID)
+			device.RefDeviceModel, err = types.NewDeviceModelRelationship("urn:ngsi-ld:DeviceModel:" + modelID)
 
 			_, err = db.CreateDevice(device)
 
@@ -163,7 +163,7 @@ func TestGetDevices(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
 		if _, modelID, ok := seedNewDeviceModel(t, db); ok {
 			device := newDevice()
-			device.RefDeviceModel, _ = types.NewDeviceModelRelationship(modelID)
+			device.RefDeviceModel, _ = types.NewDeviceModelRelationship("urn:ngsi-ld:DeviceModel:" + modelID)
 			db.CreateDevice(device)
 
 			devices, _ := db.GetDevices()
@@ -239,7 +239,7 @@ func newDeviceModel() *fiware.DeviceModel {
 func seedNewDevice(t *testing.T, db Datastore) (uint, string, bool) {
 	if _, modelID, ok := seedNewDeviceModel(t, db); ok {
 		d := newDevice()
-		d.RefDeviceModel, _ = types.NewDeviceModelRelationship(modelID)
+		d.RefDeviceModel, _ = types.NewDeviceModelRelationship("urn:ngsi-ld:DeviceModel:" + modelID)
 		device, err := db.CreateDevice(d)
 
 		if err != nil {

@@ -220,6 +220,10 @@ func (cs contextSource) ProvidesType(typeName string) bool {
 	return false
 }
 
+func (cs *contextSource) RetrieveEntity(entityID string, req ngsi.Request) (ngsi.Entity, error) {
+	return nil, nil
+}
+
 func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Request) error {
 
 	updateSource := &fiware.Device{}
