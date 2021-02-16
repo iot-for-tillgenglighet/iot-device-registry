@@ -38,9 +38,11 @@ func TestThatCreateEntityDoesNotAcceptUnknownBody(t *testing.T) {
 
 func TestThatCreateEntityStoresCorrectDevice(t *testing.T) {
 	db := &dbMock{}
-	deviceID := "urn:ngsi-ld:Device:deviceID"
+	deviceID := fiware.DeviceIDPrefix + "deviceID"
 	device := fiware.NewDevice(deviceID, "")
-	device.RefDeviceModel, _ = ngsitypes.NewDeviceModelRelationship("urn:ngsi-ld:DeviceModel:livboj")
+	device.RefDeviceModel, _ = fiware.NewDeviceModelRelationship(
+		fiware.DeviceModelIDPrefix + "livboj",
+	)
 	jsonBytes, _ := json.Marshal(device)
 	log := logging.NewLogger()
 

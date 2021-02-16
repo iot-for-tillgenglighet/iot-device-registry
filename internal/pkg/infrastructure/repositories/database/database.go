@@ -189,12 +189,12 @@ func (db *myDB) CreateDevice(src *fiware.Device) (*models.Device, error) {
 
 	// TODO: Separate fiware.Device from the repository layer so that we do not
 	// have to deal with ID strings like this
-	if strings.HasPrefix(src.ID, "urn:ngsi-ld:Device:") == false {
-		return nil, fmt.Errorf("device id %s must start with \"urn:ngsi-ld:Device:\"", src.ID)
+	if strings.HasPrefix(src.ID, fiware.DeviceIDPrefix) == false {
+		return nil, fmt.Errorf("device id %s must start with \"%s\"", src.ID, fiware.DeviceIDPrefix)
 	}
 
-	// Truncate the leading "urn:ngsi-ld:Device:" from the device id string
-	shortDeviceID := src.ID[19:]
+	// Truncate the leading fiware prefix from the device id string
+	shortDeviceID := src.ID[len(fiware.DeviceIDPrefix):]
 
 	if src.RefDeviceModel == nil {
 		return nil, fmt.Errorf("CreateDevice requires non-empty device model")
@@ -227,12 +227,12 @@ func (db *myDB) CreateDeviceModel(src *fiware.DeviceModel) (*models.DeviceModel,
 
 	// TODO: Separate fiware.DeviceModel from the repository layer so that we do not
 	// have to deal with ID strings like this
-	if strings.HasPrefix(src.ID, "urn:ngsi-ld:DeviceModel:") == false {
-		return nil, fmt.Errorf("device id %s must start with \"urn:ngsi-ld:DeviceModel:\"", src.ID)
+	if strings.HasPrefix(src.ID, fiware.DeviceModelIDPrefix) == false {
+		return nil, fmt.Errorf("device id %s must start with \"%s\"", src.ID, fiware.DeviceModelIDPrefix)
 	}
 
-	// Truncate the leading "urn:ngsi-ld:DeviceModel:" from the device model id string
-	shortDeviceID := src.ID[24:]
+	// Truncate the leading fiware prefix from the device model id string
+	shortDeviceID := src.ID[len(fiware.DeviceModelIDPrefix):]
 
 	if src.ControlledProperty == nil {
 		return nil, fmt.Errorf("Creating device model is not allowed without controlled properties")
@@ -376,8 +376,8 @@ func (db *myDB) getControlledProperties(properties []string) ([]models.DeviceCon
 func (db *myDB) getDeviceModelFromString(deviceModelID string) (*models.DeviceModel, error) {
 	truncatedID := deviceModelID
 
-	if strings.HasPrefix(deviceModelID, "urn:ngsi-ld:DeviceModel:") {
-		truncatedID = deviceModelID[24:]
+	if strings.HasPrefix(deviceModelID, fiware.DeviceModelIDPrefix) {
+		truncatedID = deviceModelID[len(fiware.DeviceModelIDPrefix):]
 	}
 
 	m := &models.DeviceModel{}

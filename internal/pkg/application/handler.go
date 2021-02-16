@@ -122,7 +122,7 @@ type contextSource struct {
 }
 
 func (cs contextSource) ProvidesEntitiesWithMatchingID(entityID string) bool {
-	return strings.HasPrefix(entityID, "urn:ngsi-ld:Device:")
+	return strings.HasPrefix(entityID, fiware.DeviceIDPrefix)
 }
 
 func (cs *contextSource) CreateEntity(typeName, entityID string, req ngsi.Request) error {
@@ -175,7 +175,7 @@ func (cs *contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntiti
 				fiwareDevice := fiware.NewDevice(device.DeviceID, device.Value)
 				deviceModel, err := cs.db.GetDeviceModelFromID(device.DeviceModelID)
 
-				fiwareDevice.RefDeviceModel, _ = ngsitypes.NewDeviceModelRelationship(deviceModel.DeviceModelID)
+				fiwareDevice.RefDeviceModel, _ = fiware.NewDeviceModelRelationship(deviceModel.DeviceModelID)
 				err = callback(fiwareDevice)
 				if err != nil {
 					break
@@ -233,8 +233,8 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Reques
 		return err
 	}
 
-	// Truncate the leading "urn:ngsi-ld:Device:" from the device id string
-	shortEntityID := entityID[19:]
+	// Truncate the fiware prefix from the device id string
+	shortEntityID := entityID[len(fiware.DeviceIDPrefix):]
 
 	postWaterTempTelemetryIfDeviceIsAWaterTempDevice(cs.messenger, shortEntityID, updateSource.Value.Value)
 

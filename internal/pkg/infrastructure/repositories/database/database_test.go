@@ -31,7 +31,9 @@ func TestThatCreateDeviceReturnsErrorIfDeviceModelIsNil(t *testing.T) {
 func TestThatCreateDeviceFailsWithUnknownDeviceModel(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
 		device := newDevice()
-		device.RefDeviceModel, _ = types.NewDeviceModelRelationship("urn:ngsi-ld:DeviceModel:nosuchthing")
+		device.RefDeviceModel, _ = fiware.NewDeviceModelRelationship(
+			fiware.DeviceModelIDPrefix + "nosuchthing",
+		)
 
 		_, err := db.CreateDevice(device)
 
@@ -111,7 +113,9 @@ func TestCreateDevice(t *testing.T) {
 
 			var err error
 			device := newDevice()
-			device.RefDeviceModel, err = types.NewDeviceModelRelationship("urn:ngsi-ld:DeviceModel:" + modelID)
+			device.RefDeviceModel, err = fiware.NewDeviceModelRelationship(
+				fiware.DeviceModelIDPrefix + modelID,
+			)
 
 			_, err = db.CreateDevice(device)
 
@@ -135,7 +139,7 @@ func TestCreateDeviceModelForWaterTemperatureDevice(t *testing.T) {
 		}
 
 		device := fiware.NewDevice("badtemperatur", "18.5")
-		device.RefDeviceModel, err = types.NewDeviceModelRelationship(deviceModel.ID)
+		device.RefDeviceModel, err = fiware.NewDeviceModelRelationship(deviceModel.ID)
 
 		_, err = db.CreateDevice(device)
 
@@ -163,7 +167,9 @@ func TestGetDevices(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
 		if _, modelID, ok := seedNewDeviceModel(t, db); ok {
 			device := newDevice()
-			device.RefDeviceModel, _ = types.NewDeviceModelRelationship("urn:ngsi-ld:DeviceModel:" + modelID)
+			device.RefDeviceModel, _ = fiware.NewDeviceModelRelationship(
+				fiware.DeviceModelIDPrefix + modelID,
+			)
 			db.CreateDevice(device)
 
 			devices, _ := db.GetDevices()
@@ -239,7 +245,9 @@ func newDeviceModel() *fiware.DeviceModel {
 func seedNewDevice(t *testing.T, db Datastore) (uint, string, bool) {
 	if _, modelID, ok := seedNewDeviceModel(t, db); ok {
 		d := newDevice()
-		d.RefDeviceModel, _ = types.NewDeviceModelRelationship("urn:ngsi-ld:DeviceModel:" + modelID)
+		d.RefDeviceModel, _ = fiware.NewDeviceModelRelationship(
+			fiware.DeviceModelIDPrefix + modelID,
+		)
 		device, err := db.CreateDevice(d)
 
 		if err != nil {
