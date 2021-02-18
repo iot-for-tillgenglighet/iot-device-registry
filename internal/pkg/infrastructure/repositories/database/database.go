@@ -243,6 +243,10 @@ func (db *myDB) CreateDeviceModel(src *fiware.DeviceModel) (*models.DeviceModel,
 		return nil, fmt.Errorf("Controlled property is not supported: %s", err.Error())
 	}
 
+	if src.Category == nil {
+		return nil, fmt.Errorf("Creating device model is not allowed without a specified category")
+	}
+
 	deviceModel := &models.DeviceModel{
 		DeviceModelID:        shortDeviceID,
 		Category:             src.Category.Value[0],
