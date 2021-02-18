@@ -28,7 +28,7 @@ def import_and_verify_prerequisites(dependencies):
         try:
             importlib.import_module(lib)
         except ImportError:
-            logging.error("You need to run 'sudo pip3 install " + text + "'")
+            logging.error("You need to run 'pip3 install " + text + "'")
             missing_imports.append(text)
 
     if len(missing_imports):

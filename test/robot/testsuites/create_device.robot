@@ -22,6 +22,6 @@ suite setup
     ${headers}=     Create Dictionary   Content-Type=application/ld+json
     Create Session    diwise    http://127.0.0.1:8686  headers=${headers}
 
-    ${TEST_ID_PRFX}=  Generate Random String	8	[NUMBERS]abcdef
+    ${TEST_ID_PRFX}=  Generate Random String  8  [NUMBERS]abcdef
     Set Suite Variable  ${TEST_ID_PRFX}
     
