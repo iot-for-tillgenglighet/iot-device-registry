@@ -43,8 +43,23 @@ Create Object Relationship
     [Return]  ${relationship}
 
 
+Create Text Property
+    [Arguments]     ${value}
+    ${tp}=      Create Dictionary  type=Property  value=${value}
+    [Return]    ${tp}
+
+
 Create Text List Property
     [Arguments]     @{items}
     @{props}=   Create List  @{items}
     ${tlp}=     Create Dictionary  type=Property  value=@{props}
     [Return]    ${tlp}
+
+
+Update Device Value
+    [Arguments]     ${session}  ${id}  ${value}
+    ${device}=      Create Fiware Entity   id=${id}   type=Device
+    ${valueprop}=   Create Text Property  ${value}
+    Set To Dictionary   ${device}    value  ${valueprop}
+    ${resp}=        PATCH On Session  ${session}  /ngsi-ld/v1/entities/${id}/attrs/  json=${device}
+    [Return]        ${resp}
