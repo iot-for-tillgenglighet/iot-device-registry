@@ -43,6 +43,7 @@ func (router *RequestRouter) addGraphQLHandlers() {
 }
 
 func (router *RequestRouter) addNGSIHandlers(contextRegistry ngsi.ContextRegistry) {
+	router.Get("/ngsi-ld/v1/entities/{entity}", ngsi.NewRetrieveEntityHandler(contextRegistry))
 	router.Get("/ngsi-ld/v1/entities", ngsi.NewQueryEntitiesHandler(contextRegistry))
 	router.Patch("/ngsi-ld/v1/entities/{entity}/attrs/", ngsi.NewUpdateEntityAttributesHandler(contextRegistry))
 	router.Post("/ngsi-ld/v1/entities", ngsi.NewCreateEntityHandler(contextRegistry))
@@ -211,17 +212,31 @@ func (cs contextSource) ProvidesAttribute(attributeName string) bool {
 
 func (cs contextSource) ProvidesType(typeName string) bool {
 
-	if typeName == "Device" {
-		return typeName == "Device"
-	} else if typeName == "DeviceModel" {
-		return typeName == "DeviceModel"
+	if typeName == "DeviceModel" {
+		return true
 	}
 
-	return false
+	return typeName == "Device"
 }
 
 func (cs *contextSource) RetrieveEntity(entityID string, req ngsi.Request) (ngsi.Entity, error) {
-	return nil, nil
+
+	shortEntityID := entityID[len(fiware.DeviceIDPrefix):]
+
+	device, err := cs.db.GetDeviceFromID(shortEntityID)
+	if err != nil {
+		return nil, fmt.Errorf("No Device found: %s", err.Error())
+	}
+
+	fiwareDevice := fiware.NewDevice(device.DeviceID, device.Value)
+	deviceModel, err := cs.db.GetDeviceModelFromID(device.DeviceModelID)
+	if err != nil {
+		return nil, fmt.Errorf("No valid deviceModel found: %s", err.Error())
+	}
+
+	fiwareDevice.RefDeviceModel, _ = fiware.NewDeviceModelRelationship(deviceModel.DeviceModelID)
+
+	return fiwareDevice, err
 }
 
 func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Request) error {

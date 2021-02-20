@@ -122,6 +122,26 @@ func TestThatPatchWaterTempDevicePublishesOnTheMessageQueue(t *testing.T) {
 	}
 }
 
+func TestRetrieveEntity(t *testing.T) {
+	db := &dbMock{}
+	db.deviceFromID = &models.Device{}
+	db.deviceModelFromID = &models.DeviceModel{}
+
+	log := logging.NewLogger()
+	req, _ := http.NewRequest("GET", createURL("/ngsi-ld/v1/entities/urn:ngsi-ld:Device:sk-elt-temp-02"), nil)
+	w := httptest.NewRecorder()
+
+	ctxreg := createContextRegistry(log, nil, db)
+
+	ngsi.NewRetrieveEntityHandler(ctxreg).ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Request failed: %d", w.Code)
+	}
+}
+
+// write unit test for retrieve entity where device is nil.
+
 func createDevicePatchWithValue(deviceid, value string) *fiware.Device {
 	device := fiware.NewDevice(deviceid, value)
 	return device
@@ -157,6 +177,10 @@ type dbMock struct {
 	device                 *fiware.Device
 	deviceModel            *fiware.DeviceModel
 	createDeviceModelError error
+	deviceFromID           *models.Device
+	deviceFromIDError      error
+	deviceModelFromID      *models.DeviceModel
+	deviceModelFromIDError error
 }
 
 func (db *dbMock) CreateDevice(device *fiware.Device) (*models.Device, error) {
@@ -177,6 +201,11 @@ func (db *dbMock) CreateDeviceModel(deviceModel *fiware.DeviceModel) (*models.De
 	return nil, nil
 }
 
+func (db *dbMock) GetDeviceFromID(id string) (*models.Device, error) {
+
+	return db.deviceFromID, db.deviceFromIDError
+}
+
 func (db *dbMock) GetDevices() ([]models.Device, error) {
 	return []models.Device{}, nil
 }
@@ -186,7 +215,7 @@ func (db *dbMock) GetDeviceModels() ([]models.DeviceModel, error) {
 }
 
 func (db *dbMock) GetDeviceModelFromID(id uint) (*models.DeviceModel, error) {
-	return nil, nil
+	return db.deviceModelFromID, db.deviceModelFromIDError
 }
 
 func (db *dbMock) UpdateDeviceValue(deviceID, value string) error {

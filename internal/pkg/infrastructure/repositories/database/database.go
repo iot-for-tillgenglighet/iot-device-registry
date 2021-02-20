@@ -23,6 +23,7 @@ import (
 type Datastore interface {
 	CreateDevice(device *fiware.Device) (*models.Device, error)
 	CreateDeviceModel(deviceModel *fiware.DeviceModel) (*models.DeviceModel, error)
+	GetDeviceFromID(id string) (*models.Device, error)
 	GetDevices() ([]models.Device, error)
 	GetDeviceModels() ([]models.DeviceModel, error)
 	GetDeviceModelFromID(id uint) (*models.DeviceModel, error)
@@ -275,6 +276,15 @@ func (db *myDB) CreateDeviceModel(src *fiware.DeviceModel) (*models.DeviceModel,
 	}
 
 	return deviceModel, nil
+}
+
+func (db *myDB) GetDeviceFromID(id string) (*models.Device, error) {
+	device := &models.Device{}
+	result := db.impl.Find(device, id)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return device, nil
 }
 
 func (db *myDB) GetDevices() ([]models.Device, error) {
