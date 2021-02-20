@@ -30,6 +30,11 @@ Retrieve Entity
     ${resp}=        GET On Session      diwise      /ngsi-ld/v1/entities/${deviceID}
 
 
+Change Value
+    ${resp}=        Update Device Value  diwise  urn:ngsi-ld:Device:${TEST_ID_PRFX}:mydevice  t=12
+    Status Should Be    204     ${resp}
+
+
 *** Keywords ***
 suite setup
     ${headers}=     Create Dictionary   Content-Type=application/ld+json

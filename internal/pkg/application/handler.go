@@ -253,7 +253,7 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Reques
 
 	postWaterTempTelemetryIfDeviceIsAWaterTempDevice(cs.messenger, shortEntityID, updateSource.Value.Value)
 
-	return cs.db.UpdateDeviceValue(entityID, updateSource.Value.Value)
+	return cs.db.UpdateDeviceValue(shortEntityID, updateSource.Value.Value)
 }
 
 //This is a hack to decode the value and send it as a telemetry message over RabbitMQ for PoC purposes.
