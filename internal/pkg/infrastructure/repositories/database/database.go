@@ -26,7 +26,8 @@ type Datastore interface {
 	GetDeviceFromID(id string) (*models.Device, error)
 	GetDevices() ([]models.Device, error)
 	GetDeviceModels() ([]models.DeviceModel, error)
-	GetDeviceModelFromID(id uint) (*models.DeviceModel, error)
+	GetDeviceModelFromID(id string) (*models.DeviceModel, error)
+	GetDeviceModelFromPrimaryKey(id uint) (*models.DeviceModel, error)
 	UpdateDeviceValue(deviceID, value string) error
 }
 
@@ -279,8 +280,9 @@ func (db *myDB) CreateDeviceModel(src *fiware.DeviceModel) (*models.DeviceModel,
 }
 
 func (db *myDB) GetDeviceFromID(id string) (*models.Device, error) {
-	device := &models.Device{}
-	result := db.impl.Find(device, id)
+	device := &models.Device{DeviceID: id}
+	result := db.impl.Where(device).First(device)
+	// db.Where(&User{Name: "jinzhu", Age: 20}).First(&user)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -306,7 +308,16 @@ func (db *myDB) GetDeviceModels() ([]models.DeviceModel, error) {
 	return deviceModels, nil
 }
 
-func (db *myDB) GetDeviceModelFromID(id uint) (*models.DeviceModel, error) {
+func (db *myDB) GetDeviceModelFromID(id string) (*models.DeviceModel, error) {
+	deviceModel := &models.DeviceModel{DeviceModelID: id}
+	result := db.impl.Where(deviceModel).First(deviceModel)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return deviceModel, nil
+}
+
+func (db *myDB) GetDeviceModelFromPrimaryKey(id uint) (*models.DeviceModel, error) {
 	deviceModel := &models.DeviceModel{}
 	result := db.impl.Find(deviceModel, id)
 	if result.Error != nil {

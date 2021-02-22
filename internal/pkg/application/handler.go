@@ -29,6 +29,7 @@ import (
 	ngsitypes "github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/ngsi-ld/types"
 )
 
+//RequestRouter needs a comment
 type RequestRouter struct {
 	impl *chi.Mux
 }
@@ -123,6 +124,9 @@ type contextSource struct {
 }
 
 func (cs contextSource) ProvidesEntitiesWithMatchingID(entityID string) bool {
+	if strings.Contains(entityID, "DeviceModel") {
+		return strings.HasPrefix(entityID, fiware.DeviceModelIDPrefix)
+	}
 	return strings.HasPrefix(entityID, fiware.DeviceIDPrefix)
 }
 
@@ -174,7 +178,7 @@ func (cs *contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntiti
 
 			for _, device := range devices {
 				fiwareDevice := fiware.NewDevice(device.DeviceID, device.Value)
-				deviceModel, err := cs.db.GetDeviceModelFromID(device.DeviceModelID)
+				deviceModel, err := cs.db.GetDeviceModelFromPrimaryKey(device.DeviceModelID)
 
 				fiwareDevice.RefDeviceModel, _ = fiware.NewDeviceModelRelationship(deviceModel.DeviceModelID)
 				err = callback(fiwareDevice)
@@ -220,23 +224,41 @@ func (cs contextSource) ProvidesType(typeName string) bool {
 }
 
 func (cs *contextSource) RetrieveEntity(entityID string, req ngsi.Request) (ngsi.Entity, error) {
+	if strings.HasPrefix(entityID, fiware.DeviceIDPrefix) {
+		shortEntityID := entityID[len(fiware.DeviceIDPrefix):]
 
-	shortEntityID := entityID[len(fiware.DeviceIDPrefix):]
+		device, err := cs.db.GetDeviceFromID(shortEntityID)
+		if err != nil {
+			return nil, fmt.Errorf("No Device found with ID %s: %s", shortEntityID, err.Error())
+		}
 
-	device, err := cs.db.GetDeviceFromID(shortEntityID)
-	if err != nil {
-		return nil, fmt.Errorf("No Device found: %s", err.Error())
+		fiwareDevice := fiware.NewDevice(device.DeviceID, device.Value)
+		deviceModel, err := cs.db.GetDeviceModelFromPrimaryKey(device.DeviceModelID)
+		if err != nil {
+			return nil, fmt.Errorf("No valid deviceModel found: %s", err.Error())
+		}
+
+		fiwareDevice.RefDeviceModel, _ = fiware.NewDeviceModelRelationship(deviceModel.DeviceModelID)
+
+		return fiwareDevice, err
+	} else if strings.HasPrefix(entityID, fiware.DeviceModelIDPrefix) {
+		shortEntityID := entityID[len(fiware.DeviceModelIDPrefix):]
+
+		deviceModel, err := cs.db.GetDeviceModelFromID(shortEntityID)
+		if err != nil {
+			return nil, fmt.Errorf("No DeviceModel found with ID %s: %s", shortEntityID, err.Error())
+		}
+
+		fiwareDeviceModel := fiware.NewDeviceModel(deviceModel.DeviceModelID, []string{deviceModel.Category})
+		fiwareDeviceModel.BrandName = ngsitypes.NewTextProperty(deviceModel.BrandName)
+		fiwareDeviceModel.ModelName = ngsitypes.NewTextProperty(deviceModel.ModelName)
+		fiwareDeviceModel.ManufacturerName = ngsitypes.NewTextProperty(deviceModel.ManufacturerName)
+		fiwareDeviceModel.Name = ngsitypes.NewTextProperty(deviceModel.Name)
+
+		return fiwareDeviceModel, nil
 	}
 
-	fiwareDevice := fiware.NewDevice(device.DeviceID, device.Value)
-	deviceModel, err := cs.db.GetDeviceModelFromID(device.DeviceModelID)
-	if err != nil {
-		return nil, fmt.Errorf("No valid deviceModel found: %s", err.Error())
-	}
-
-	fiwareDevice.RefDeviceModel, _ = fiware.NewDeviceModelRelationship(deviceModel.DeviceModelID)
-
-	return fiwareDevice, err
+	return nil, fmt.Errorf("Unable to find entity type from entity ID: %s", entityID)
 }
 
 func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Request) error {

@@ -24,16 +24,21 @@ Get Entities
     Status Should Be    200     ${resp}
 
 
-Retrieve Entity
+Get Device
     ${deviceID}=    Set Variable        urn:ngsi-ld:Device:${TEST_ID_PRFX}:mydevice
-
     ${resp}=        GET On Session      diwise      /ngsi-ld/v1/entities/${deviceID}
+    Status Should Be    200     ${resp}
 
 
 Change Value
     ${resp}=        Update Device Value  diwise  urn:ngsi-ld:Device:${TEST_ID_PRFX}:mydevice  t=12
     Status Should Be    204     ${resp}
 
+
+Get Device Model
+    ${deviceModelID}=  Set Variable     urn:ngsi-ld:DeviceModel:${TEST_ID_PRFX}:mymodel
+    ${resp}=        GET On Session      diwise    /ngsi-ld/v1/entities/${deviceModelID}
+    Status Should Be    200     ${resp}
 
 *** Keywords ***
 suite setup

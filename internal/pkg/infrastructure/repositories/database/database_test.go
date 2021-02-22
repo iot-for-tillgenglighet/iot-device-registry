@@ -64,9 +64,9 @@ func TestThatCreateDeviceModelStoresAllValues(t *testing.T) {
 		}
 
 		// get deviceModel and compare
-		createdDeviceModel, err = db.GetDeviceModelFromID(createdDeviceModel.ID)
+		createdDeviceModel, err = db.GetDeviceModelFromPrimaryKey(createdDeviceModel.ID)
 		if err != nil {
-			t.Error("GetDeviceModelFromID failed:" + err.Error())
+			t.Error("GetDeviceModelFromPrimaryKey failed:" + err.Error())
 		}
 
 		checkStringValue(t, "brand name", createdDeviceModel.BrandName, brandName)
@@ -89,13 +89,13 @@ func TestGetDeviceModels(t *testing.T) {
 	}
 }
 
-func TestGetDeviceModelFromID(t *testing.T) {
+func TestGetDeviceModelFromPrimaryKey(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
 		if key, modelID, ok := seedNewDeviceModel(t, db); ok {
 
-			deviceModel, err := db.GetDeviceModelFromID(key)
+			deviceModel, err := db.GetDeviceModelFromPrimaryKey(key)
 			if err != nil {
-				t.Error("GetDeviceModelFromID failed with error:", err.Error())
+				t.Error("GetDeviceModelFromPrimaryKey failed with error:", err.Error())
 			}
 
 			if strings.Compare(modelID, deviceModel.DeviceModelID) != 0 {

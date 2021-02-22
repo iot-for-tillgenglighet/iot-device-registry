@@ -125,10 +125,10 @@ func TestThatPatchWaterTempDevicePublishesOnTheMessageQueue(t *testing.T) {
 func TestRetrieveEntity(t *testing.T) {
 	db := &dbMock{}
 	db.deviceFromID = &models.Device{}
-	db.deviceModelFromID = &models.DeviceModel{}
+	db.deviceModelReturned = &models.DeviceModel{}
 
 	log := logging.NewLogger()
-	req, _ := http.NewRequest("GET", createURL("/ngsi-ld/v1/entities/urn:ngsi-ld:Device:sk-elt-temp-02"), nil)
+	req, _ := http.NewRequest("GET", createURL("/ngsi-ld/v1/entities/urn:ngsi-ld:DeviceModel:sk-elt-temp-02"), nil)
 	w := httptest.NewRecorder()
 
 	ctxreg := createContextRegistry(log, nil, db)
@@ -173,14 +173,14 @@ func (m *msgMock) PublishOnTopic(message messaging.TopicMessage) error {
 }
 
 type dbMock struct {
-	createCount            uint32
-	device                 *fiware.Device
-	deviceModel            *fiware.DeviceModel
-	createDeviceModelError error
-	deviceFromID           *models.Device
-	deviceFromIDError      error
-	deviceModelFromID      *models.DeviceModel
-	deviceModelFromIDError error
+	createCount              uint32
+	device                   *fiware.Device
+	deviceModel              *fiware.DeviceModel
+	createDeviceModelError   error
+	deviceFromID             *models.Device
+	deviceFromIDError        error
+	deviceModelReturned      *models.DeviceModel
+	deviceModelReturnedError error
 }
 
 func (db *dbMock) CreateDevice(device *fiware.Device) (*models.Device, error) {
@@ -214,8 +214,12 @@ func (db *dbMock) GetDeviceModels() ([]models.DeviceModel, error) {
 	return []models.DeviceModel{}, nil
 }
 
-func (db *dbMock) GetDeviceModelFromID(id uint) (*models.DeviceModel, error) {
-	return db.deviceModelFromID, db.deviceModelFromIDError
+func (db *dbMock) GetDeviceModelFromID(id string) (*models.DeviceModel, error) {
+	return db.deviceModelReturned, db.deviceModelReturnedError
+}
+
+func (db *dbMock) GetDeviceModelFromPrimaryKey(id uint) (*models.DeviceModel, error) {
+	return db.deviceModelReturned, db.deviceModelReturnedError
 }
 
 func (db *dbMock) UpdateDeviceValue(deviceID, value string) error {
