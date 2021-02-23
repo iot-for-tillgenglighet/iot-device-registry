@@ -136,8 +136,9 @@ func NewDatabaseConnection(connect ConnectorFunc, log logging.Logger) (Datastore
 
 	// Make sure that the controlled properties table is properly seeded
 	props := map[string]string{
-		"temperature": "t",
-		"snowDepth":   "snow",
+		"fillingLevel": "l",
+		"snowDepth":    "snow",
+		"temperature":  "t",
 	}
 
 	for property, abbreviation := range props {
@@ -289,16 +290,23 @@ func (db *myDB) GetDeviceFromID(id string) (*models.Device, error) {
 	deviceValue := &models.DeviceValue{DeviceID: device.ID}
 	deviceValues := []models.DeviceValue{}
 
-	result = db.impl.Debug().Where(deviceValue).Group("device_controlled_property_id").Order("observed_at desc").Find(&deviceValues)
+	result = db.impl.Debug().Select("device_controlled_property_id, value, MAX(observed_at)").Where(deviceValue).Group("device_controlled_property_id").Order("device_controlled_property_id").Find(&deviceValues)
+	if result.Error != nil {
+		return nil, result.Error
+	}
 
 	if result.RowsAffected > 0 {
+		values := []string{}
+
 		for _, value := range deviceValues {
 			for _, controlledProperty := range db.controlledProperties {
 				if controlledProperty.ID == value.DeviceControlledPropertyID {
-					device.Value = controlledProperty.Abbreviation + "=" + value.Value
+					values = append(values, fmt.Sprintf("%s=%s", controlledProperty.Abbreviation, value.Value))
 				}
 			}
 		}
+
+		device.Value = strings.Join(values, "&")
 	}
 
 	return device, nil

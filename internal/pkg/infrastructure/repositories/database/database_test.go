@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/logging"
 	"github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/datamodels/fiware"
@@ -185,8 +186,15 @@ func TestUpdateDeviceValue(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
 		if _, deviceID, ok := seedNewDevice(t, db); ok {
 
-			_ = db.UpdateDeviceValue(deviceID, "t=12")
-			err := db.UpdateDeviceValue(deviceID, "t=11")
+			_ = db.UpdateDeviceValue(deviceID, "t=10")
+			time.Sleep(10 * time.Millisecond)
+			_ = db.UpdateDeviceValue(deviceID, "l=3")
+			time.Sleep(10 * time.Millisecond)
+			_ = db.UpdateDeviceValue(deviceID, "t=11")
+			time.Sleep(10 * time.Millisecond)
+			_ = db.UpdateDeviceValue(deviceID, "l=5")
+			time.Sleep(10 * time.Millisecond)
+			err := db.UpdateDeviceValue(deviceID, "t=12")
 
 			if err != nil {
 				t.Errorf("Failed to update device value: %s", err.Error())
@@ -196,7 +204,7 @@ func TestUpdateDeviceValue(t *testing.T) {
 			if err != nil {
 				t.Errorf("Failed to get device: %s", err.Error())
 			}
-			if device.Value != "t=12" {
+			if device.Value != "l=5&t=12" {
 				t.Errorf("Received unexpected device value: %s", device.Value)
 			}
 		}
@@ -259,7 +267,7 @@ func newDeviceModel() *fiware.DeviceModel {
 
 	categories := []string{"T"}
 	deviceModel := fiware.NewDeviceModel(id, categories)
-	deviceModel.ControlledProperty = types.NewTextListProperty([]string{"temperature"})
+	deviceModel.ControlledProperty = types.NewTextListProperty([]string{"fillingLevel", "temperature"})
 
 	return deviceModel
 }
