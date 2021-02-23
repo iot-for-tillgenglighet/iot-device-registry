@@ -290,7 +290,9 @@ func (db *myDB) GetDeviceFromID(id string) (*models.Device, error) {
 	deviceValue := &models.DeviceValue{DeviceID: device.ID}
 	deviceValues := []models.DeviceValue{}
 
-	result = db.impl.Debug().Select("device_controlled_property_id, value, MAX(observed_at)").Where(deviceValue).Group("device_controlled_property_id").Order("device_controlled_property_id").Find(&deviceValues)
+	// TODO: DISTINCT ON is PostgreSQL specific and fails on SQLite. Find a compatible solution.
+	result = db.impl.Debug().Select("DISTINCT ON (device_controlled_property_id) device_controlled_property_id, value").Where(deviceValue).Order("device_controlled_property_id, observed_at desc").Find(&deviceValues)
+
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -306,7 +308,7 @@ func (db *myDB) GetDeviceFromID(id string) (*models.Device, error) {
 			}
 		}
 
-		device.Value = strings.Join(values, "&")
+		device.Value = strings.Join(values, ";")
 	}
 
 	return device, nil

@@ -22,7 +22,7 @@ Create Device Model
     [Arguments]     ${id}
     ${model}=       Create Fiware Entity   id=${id}   type=DeviceModel
     ${category}=    Create Text List Property  sensor
-    ${ctrlprops}=   Create Text List Property  temperature
+    ${ctrlprops}=   Create Text List Property  temperature  snowDepth
     Set To Dictionary   ${model}    category  ${category}
     Set To Dictionary   ${model}    controlledProperty  ${ctrlprops}
     [Return]        ${model}

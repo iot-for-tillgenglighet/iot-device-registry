@@ -35,7 +35,12 @@ Get Device
 
 Change Value
     ${deviceID}=    Set Variable        urn:ngsi-ld:Device:${TEST_ID_PRFX}:mydevice
+    ${resp}=            Update Device Value  diwise  ${deviceID}  t=10
+    ${resp}=            Update Device Value  diwise  ${deviceID}  snow=23
+    ${resp}=            Update Device Value  diwise  ${deviceID}  snow=24
+    ${resp}=            Update Device Value  diwise  ${deviceID}  t=11
     ${resp}=            Update Device Value  diwise  ${deviceID}  t=12
+    ${resp}=            Update Device Value  diwise  ${deviceID}  snow=25
     Status Should Be    204     ${resp}
 
     
@@ -44,7 +49,7 @@ Change Value
     ${value}=           Get From Dictionary     ${deviceValue}     value
 
 
-    Should Be Equal As Strings   ${value}     t=12
+    Should Be Equal As Strings   ${value}     snow=25;t=12
 
 
 Get Device Model
