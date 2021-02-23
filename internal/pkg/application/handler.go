@@ -272,14 +272,27 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Reques
 
 	// Truncate the fiware prefix from the device id string
 	shortEntityID := entityID[len(fiware.DeviceIDPrefix):]
+	device, err := cs.db.GetDeviceFromID(shortEntityID)
+	if err != nil {
+		cs.log.Errorf("Unable to find device %s for attributes update.", entityID)
+		return err
+	}
 
-	postWaterTempTelemetryIfDeviceIsAWaterTempDevice(cs.messenger, shortEntityID, updateSource.Value.Value)
+	err = cs.db.UpdateDeviceValue(shortEntityID, updateSource.Value.Value)
+	if err == nil {
+		postWaterTempTelemetryIfDeviceIsAWaterTempDevice(
+			cs.messenger,
+			shortEntityID,
+			device.Latitude, device.Longitude,
+			updateSource.Value.Value,
+		)
+	}
 
-	return cs.db.UpdateDeviceValue(shortEntityID, updateSource.Value.Value)
+	return err
 }
 
 //This is a hack to decode the value and send it as a telemetry message over RabbitMQ for PoC purposes.
-func postWaterTempTelemetryIfDeviceIsAWaterTempDevice(messenger MessagingContext, device, value string) {
+func postWaterTempTelemetryIfDeviceIsAWaterTempDevice(messenger MessagingContext, device string, lat, lon float64, value string) {
 	if strings.Contains(device, "sk-elt-temp-") {
 		decodedValue, err := url.QueryUnescape(value)
 		if err != nil {
@@ -294,7 +307,7 @@ func postWaterTempTelemetryIfDeviceIsAWaterTempDevice(messenger MessagingContext
 					temp, err := strconv.ParseFloat(parts[1], 64)
 					if err == nil {
 						messenger.PublishOnTopic(
-							telemetry.NewWaterTemperatureTelemetry(temp, device, 0.0, 0.0),
+							telemetry.NewWaterTemperatureTelemetry(temp, device, lat, lon),
 						)
 					}
 					return
