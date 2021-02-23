@@ -17,9 +17,9 @@ Create Device
 
     Status Should Be    201     ${resp}
 
-Get Entities    
 
-    ${resp}=        GET On Session      diwise      /ngsi-ld/v1/entities?type\=Device
+Get Entities    
+    ${resp}=        GET On Session      diwise      /ngsi-ld/v1/entities?type\=DeviceModel
 
     Status Should Be    200     ${resp}
 
@@ -27,24 +27,29 @@ Get Entities
 Get Device
     ${deviceID}=    Set Variable        urn:ngsi-ld:Device:${TEST_ID_PRFX}:mydevice
     ${resp}=        GET On Session      diwise      /ngsi-ld/v1/entities/${deviceID}
+
     Status Should Be    200     ${resp}
+
+    Entity Type And ID Should Match   ${resp.json()}  Device  ${deviceID}
 
 
 Change Value
-    ${resp}=        Update Device Value  diwise  urn:ngsi-ld:Device:${TEST_ID_PRFX}:mydevice  t=12
+    ${resp}=            Update Device Value  diwise  urn:ngsi-ld:Device:${TEST_ID_PRFX}:mydevice  t=12
     Status Should Be    204     ${resp}
 
 
 Get Device Model
     ${deviceModelID}=  Set Variable     urn:ngsi-ld:DeviceModel:${TEST_ID_PRFX}:mymodel
-    ${resp}=        GET On Session      diwise    /ngsi-ld/v1/entities/${deviceModelID}
-    Status Should Be    200     ${resp}
+    ${resp}=           GET On Session      diwise    /ngsi-ld/v1/entities/${deviceModelID}
+    Status Should Be   200     ${resp}
+
+    Entity Type And ID Should Match  ${resp.json()}  DeviceModel  ${deviceModelID}
+
 
 *** Keywords ***
 suite setup
-    ${headers}=     Create Dictionary   Content-Type=application/ld+json
+    ${headers}=       Create Dictionary   Content-Type=application/ld+json
     Create Session    diwise    http://127.0.0.1:8686  headers=${headers}
 
     ${TEST_ID_PRFX}=  Generate Random String  8  [NUMBERS]abcdef
     Set Suite Variable  ${TEST_ID_PRFX}
-    

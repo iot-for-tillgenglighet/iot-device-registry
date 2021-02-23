@@ -56,6 +56,15 @@ Create Text List Property
     [Return]    ${tlp}
 
 
+Entity Type And ID Should Match
+    [Arguments]     ${entity}   ${type}   ${id}
+    ${entityID}=    Get From Dictionary     ${entity}     id
+    Should Be Equal As Strings      ${entityID}     ${id}
+
+    ${entityType}=    Get From Dictionary     ${entity}     type
+    Should Be Equal As Strings      ${entityType}   ${type}
+
+
 Update Device Value
     [Arguments]     ${session}  ${id}  ${value}
     ${device}=      Create Fiware Entity   id=${id}   type=Device
