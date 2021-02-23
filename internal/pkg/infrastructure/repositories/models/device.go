@@ -32,8 +32,8 @@ type DeviceModel struct {
 //DeviceValue stores the value from a point in time (observedAt)
 type DeviceValue struct {
 	gorm.Model
-	DeviceID                   uint
-	DeviceControlledPropertyID uint
+	DeviceID                   uint `gorm:"index:values_from_device"`
+	DeviceControlledPropertyID uint `gorm:"index:values_from_property"`
 	Value                      string
 	ObservedAt                 time.Time
 }
