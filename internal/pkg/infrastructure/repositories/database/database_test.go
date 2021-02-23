@@ -185,10 +185,32 @@ func TestUpdateDeviceValue(t *testing.T) {
 	if db, ok := newDatabaseForTest(t); ok {
 		if _, deviceID, ok := seedNewDevice(t, db); ok {
 
-			err := db.UpdateDeviceValue(deviceID, "t=12")
+			_ = db.UpdateDeviceValue(deviceID, "t=12")
+			err := db.UpdateDeviceValue(deviceID, "t=11")
 
 			if err != nil {
 				t.Errorf("Failed to update device value: %s", err.Error())
+			}
+
+			device, err := db.GetDeviceFromID(deviceID)
+			if err != nil {
+				t.Errorf("Failed to get device: %s", err.Error())
+			}
+			if device.Value != "t=12" {
+				t.Errorf("Received unexpected device value: %s", device.Value)
+			}
+		}
+	}
+}
+
+func TestThatUpdateDeviceDoesNotSaveUnsupportedControlledProperty(t *testing.T) {
+	if db, ok := newDatabaseForTest(t); ok {
+		if _, deviceID, ok := seedNewDevice(t, db); ok {
+
+			err := db.UpdateDeviceValue(deviceID, "snow=12")
+
+			if err == nil {
+				t.Error("Expected UpdateDeviceValue to fail, but it didn't.")
 			}
 		}
 	}

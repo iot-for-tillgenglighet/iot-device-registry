@@ -282,10 +282,25 @@ func (db *myDB) CreateDeviceModel(src *fiware.DeviceModel) (*models.DeviceModel,
 func (db *myDB) GetDeviceFromID(id string) (*models.Device, error) {
 	device := &models.Device{DeviceID: id}
 	result := db.impl.Where(device).First(device)
-	// db.Where(&User{Name: "jinzhu", Age: 20}).First(&user)
 	if result.Error != nil {
 		return nil, result.Error
 	}
+
+	deviceValue := &models.DeviceValue{DeviceID: device.ID}
+	deviceValues := []models.DeviceValue{}
+
+	result = db.impl.Debug().Where(deviceValue).Group("device_controlled_property_id").Order("observed_at desc").Find(&deviceValues)
+
+	if result.RowsAffected > 0 {
+		for _, value := range deviceValues {
+			for _, controlledProperty := range db.controlledProperties {
+				if controlledProperty.ID == value.DeviceControlledPropertyID {
+					device.Value = controlledProperty.Abbreviation + "=" + value.Value
+				}
+			}
+		}
+	}
+
 	return device, nil
 }
 
@@ -361,6 +376,10 @@ func (db *myDB) UpdateDeviceValue(deviceID, value string) error {
 		kv := strings.Split(v, "=")
 		if len(kv) != 2 {
 			return errors.New("Failed to split value in two")
+		}
+
+		if ctrlPropMap[kv[0]] == 0 {
+			return fmt.Errorf("Device does not support this controlled property: %s", kv[0])
 		}
 
 		deviceValue := &models.DeviceValue{

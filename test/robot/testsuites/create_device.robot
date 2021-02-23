@@ -34,8 +34,17 @@ Get Device
 
 
 Change Value
-    ${resp}=            Update Device Value  diwise  urn:ngsi-ld:Device:${TEST_ID_PRFX}:mydevice  t=12
+    ${deviceID}=    Set Variable        urn:ngsi-ld:Device:${TEST_ID_PRFX}:mydevice
+    ${resp}=            Update Device Value  diwise  ${deviceID}  t=12
     Status Should Be    204     ${resp}
+
+    
+    ${resp}=            GET On Session      diwise      /ngsi-ld/v1/entities/${deviceID}
+    ${deviceValue}=     Get From Dictionary     ${resp.json()}     value
+    ${value}=           Get From Dictionary     ${deviceValue}     value
+
+
+    Should Be Equal As Strings   ${value}     t=12
 
 
 Get Device Model
