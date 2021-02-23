@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -106,7 +107,9 @@ func TestThatCreateEntityFailsOnUnknownEntity(t *testing.T) {
 }
 
 func TestThatPatchWaterTempDevicePublishesOnTheMessageQueue(t *testing.T) {
-	db := &dbMock{}
+	db := &dbMock{
+		deviceFromID: &models.Device{},
+	}
 	m := msgMock{}
 
 	jsonBytes, _ := json.Marshal(createDevicePatchWithValue("sk-elt-temp-02", "t%3D12"))
@@ -123,9 +126,10 @@ func TestThatPatchWaterTempDevicePublishesOnTheMessageQueue(t *testing.T) {
 }
 
 func TestRetrieveEntity(t *testing.T) {
-	db := &dbMock{}
-	db.deviceFromID = &models.Device{}
-	db.deviceModelReturned = &models.DeviceModel{}
+	db := &dbMock{
+		deviceFromID:        &models.Device{},
+		deviceModelReturned: &models.DeviceModel{},
+	}
 
 	log := logging.NewLogger()
 	req, _ := http.NewRequest("GET", createURL("/ngsi-ld/v1/entities/urn:ngsi-ld:DeviceModel:sk-elt-temp-02"), nil)
@@ -202,8 +206,11 @@ func (db *dbMock) CreateDeviceModel(deviceModel *fiware.DeviceModel) (*models.De
 }
 
 func (db *dbMock) GetDeviceFromID(id string) (*models.Device, error) {
+	if db.deviceFromID != nil || db.deviceFromIDError != nil {
+		return db.deviceFromID, db.deviceFromIDError
+	}
 
-	return db.deviceFromID, db.deviceFromIDError
+	return nil, fmt.Errorf("Unexpected call to GetDeviceFromID with id %s", id)
 }
 
 func (db *dbMock) GetDevices() ([]models.Device, error) {
