@@ -123,16 +123,16 @@ func NewDatabaseConnection(connect ConnectorFunc, log logging.Logger) (Datastore
 	}
 
 	db := &myDB{
-		impl: impl,
+		impl: impl.Debug(),
 	}
 
-	db.impl.Debug().AutoMigrate(&models.DeviceControlledProperty{})
-	db.impl.Debug().AutoMigrate(&models.DeviceModel{})
-	db.impl.Debug().AutoMigrate(&models.DeviceValue{})
-	db.impl.Debug().AutoMigrate(&models.Device{})
+	db.impl.AutoMigrate(&models.DeviceControlledProperty{})
+	db.impl.AutoMigrate(&models.DeviceModel{})
+	db.impl.AutoMigrate(&models.DeviceValue{})
+	db.impl.AutoMigrate(&models.Device{})
 
-	db.impl.Debug().Model(&models.DeviceModel{}).Association("DeviceControlledProperty")
-	db.impl.Debug().Model(&models.Device{}).Association("DeviceModel")
+	db.impl.Model(&models.DeviceModel{}).Association("DeviceControlledProperty")
+	db.impl.Model(&models.Device{}).Association("DeviceModel")
 
 	// Make sure that the controlled properties table is properly seeded
 	props := map[string]string{
@@ -150,7 +150,7 @@ func NewDatabaseConnection(connect ConnectorFunc, log logging.Logger) (Datastore
 
 			controlledProperty.Name = property
 			controlledProperty.Abbreviation = abbreviation
-			result = db.impl.Debug().Create(&controlledProperty)
+			result = db.impl.Create(&controlledProperty)
 
 			if result.Error != nil {
 				log.Fatalf("Failed to seed DeviceControlledProperty into database %s", result.Error.Error())
@@ -170,13 +170,13 @@ func NewDatabaseConnection(connect ConnectorFunc, log logging.Logger) (Datastore
 
 	for _, model := range deviceModels {
 		m := models.DeviceModel{}
-		result := db.impl.Debug().Where("device_model_id = ?", model.DeviceModelID).First(&m)
+		result := db.impl.Where("device_model_id = ?", model.DeviceModelID).First(&m)
 		if result.RowsAffected == 0 {
 			m.DeviceModelID = model.DeviceModelID
 			m.Category = model.Category
 			m.ControlledProperties = model.ControlledProperties
 
-			result = db.impl.Debug().Create(&m)
+			result = db.impl.Create(&m)
 			if result.Error != nil {
 				log.Fatalf("Failed to seed DeviceModel into database %s", result.Error.Error())
 				return nil, result.Error
@@ -218,7 +218,7 @@ func (db *myDB) CreateDevice(src *fiware.Device) (*models.Device, error) {
 		device.Longitude = src.Location.Value.Coordinates[1]
 	}
 
-	result := db.impl.Debug().Create(device)
+	result := db.impl.Create(device)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -272,7 +272,7 @@ func (db *myDB) CreateDeviceModel(src *fiware.DeviceModel) (*models.DeviceModel,
 		deviceModel.Name = src.Name.Value
 	}
 
-	result := db.impl.Debug().Create(deviceModel)
+	result := db.impl.Create(deviceModel)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -291,7 +291,7 @@ func (db *myDB) GetDeviceFromID(id string) (*models.Device, error) {
 	deviceValues := []models.DeviceValue{}
 
 	// TODO: DISTINCT ON is PostgreSQL specific and fails on SQLite. Find a compatible solution.
-	result = db.impl.Debug().Select("DISTINCT ON (device_controlled_property_id) device_controlled_property_id, value").Where(deviceValue).Order("device_controlled_property_id, observed_at desc").Find(&deviceValues)
+	result = db.impl.Select("DISTINCT ON (device_controlled_property_id) device_controlled_property_id, value").Where(deviceValue).Order("device_controlled_property_id, observed_at desc").Find(&deviceValues)
 
 	if result.Error != nil {
 		return nil, result.Error
@@ -399,13 +399,13 @@ func (db *myDB) UpdateDeviceValue(deviceID, value string) error {
 			ObservedAt:                 time.Now().UTC(),
 		}
 
-		result = db.impl.Debug().Create(deviceValue)
+		result = db.impl.Create(deviceValue)
 		if result.Error != nil {
 			return result.Error
 		}
 	}
 
-	db.impl.Debug().Model(&models.Device{}).Where("id = ?", device.ID).Update("date_last_value_reported", time.Now().UTC())
+	db.impl.Model(&models.Device{}).Where("id = ?", device.ID).Update("date_last_value_reported", time.Now().UTC())
 
 	return nil
 }
@@ -437,7 +437,7 @@ func (db *myDB) getDeviceModelFromString(deviceModelID string) (*models.DeviceMo
 	}
 
 	m := &models.DeviceModel{}
-	result := db.impl.Debug().Where("device_model_id = ?", truncatedID).First(m)
+	result := db.impl.Where("device_model_id = ?", truncatedID).First(m)
 	if result.RowsAffected == 1 {
 		return m, nil
 	}
