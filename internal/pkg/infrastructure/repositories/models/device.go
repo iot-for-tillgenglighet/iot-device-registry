@@ -9,12 +9,13 @@ import (
 //Device is the database model to store devices in our database
 type Device struct {
 	gorm.Model
-	DeviceID      string `gorm:"unique"`
-	Latitude      float64
-	Longitude     float64
-	Value         string
-	DeviceModelID uint
-	DeviceModel   DeviceModel
+	DeviceID              string `gorm:"unique"`
+	Latitude              float64
+	Longitude             float64
+	Value                 string
+	DeviceModelID         uint
+	DeviceModel           DeviceModel
+	DateLastValueReported time.Time
 }
 
 //DeviceModel is the database model to store Fiware Device Models in our database

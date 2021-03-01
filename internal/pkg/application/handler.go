@@ -239,6 +239,9 @@ func (cs *contextSource) RetrieveEntity(entityID string, req ngsi.Request) (ngsi
 		}
 
 		fiwareDevice.RefDeviceModel, _ = fiware.NewDeviceModelRelationship(deviceModel.DeviceModelID)
+		if device.DateLastValueReported.IsZero() == false {
+			fiwareDevice.DateLastValueReported = ngsitypes.CreateDateTimeProperty(device.DateLastValueReported.String())
+		}
 
 		return fiwareDevice, err
 	} else if strings.HasPrefix(entityID, fiware.DeviceModelIDPrefix) {

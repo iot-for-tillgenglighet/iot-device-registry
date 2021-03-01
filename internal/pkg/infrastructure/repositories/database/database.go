@@ -405,6 +405,8 @@ func (db *myDB) UpdateDeviceValue(deviceID, value string) error {
 		}
 	}
 
+	db.impl.Debug().Model(&models.Device{}).Where("id = ?", device.ID).Update("date_last_value_reported", time.Now().UTC())
+
 	return nil
 }
 

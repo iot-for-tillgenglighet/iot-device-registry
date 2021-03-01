@@ -33,23 +33,38 @@ Get Device
     Entity Type And ID Should Match   ${resp.json()}  Device  ${deviceID}
 
 
-Change Value
+Check That Update Entity Attributes Updates Values Correctly
     ${deviceID}=    Set Variable        urn:ngsi-ld:Device:${TEST_ID_PRFX}:mydevice
     ${resp}=            Update Device Value  diwise  ${deviceID}  t=10
-    ${resp}=            Update Device Value  diwise  ${deviceID}  snow=23
-    ${resp}=            Update Device Value  diwise  ${deviceID}  snow=24
-    ${resp}=            Update Device Value  diwise  ${deviceID}  t=11
-    ${resp}=            Update Device Value  diwise  ${deviceID}  t=12
+
+    Update Device Value  diwise  ${deviceID}  snow=23
+    Update Device Value  diwise  ${deviceID}  snow=24
+    Update Device Value  diwise  ${deviceID}  t=11
+    Update Device Value  diwise  ${deviceID}  t=12
+
     ${resp}=            Update Device Value  diwise  ${deviceID}  snow=25
     Status Should Be    204     ${resp}
-
     
-    ${resp}=            GET On Session      diwise      /ngsi-ld/v1/entities/${deviceID}
+    ${resp}=            GET On Session          diwise      /ngsi-ld/v1/entities/${deviceID}
     ${deviceValue}=     Get From Dictionary     ${resp.json()}     value
     ${value}=           Get From Dictionary     ${deviceValue}     value
 
-
     Should Be Equal As Strings   ${value}     snow=25;t=12
+
+
+Check Date Last Value Reported Updates Correctly
+    ${deviceID}=    Set Variable        urn:ngsi-ld:Device:${TEST_ID_PRFX}:mydevice
+
+    ${resp}=            Update Device Value  diwise  ${deviceID}  t=10
+    ${resp}=            GET On Session       diwise  /ngsi-ld/v1/entities/${deviceID}
+    ${firstDateValueReported}=            Get From Dictionary  ${resp.json()}       dateLastValueReported
+
+
+    ${resp}=            Update Device Value  diwise  ${deviceID}  t=25
+    ${resp}=            GET On Session       diwise  /ngsi-ld/v1/entities/${deviceID}
+    ${lastDateValueReported}=           Get From Dictionary     ${resp.json()}      dateLastValueReported
+
+    Should Not Be Equal As Strings      ${firstDateValueReported}      ${lastDateValueReported}
 
 
 Get Device Model
