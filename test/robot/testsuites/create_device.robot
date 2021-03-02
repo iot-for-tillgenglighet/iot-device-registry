@@ -9,10 +9,8 @@ Suite Setup       suite setup
 
 *** Test Cases ***
 Create Device
-    ${model}=       Create Device Model  urn:ngsi-ld:DeviceModel:${TEST_ID_PRFX}:mymodel
     ${deviceID}=    Set Variable        urn:ngsi-ld:Device:${TEST_ID_PRFX}:mydevice
-    ${device}=      Create Device       ${deviceID}  ${model}
-    ${resp}=        POST On Session     diwise      /ngsi-ld/v1/entities    json=${model}
+    ${device}=      Create Device       ${deviceID}  ${snowTempModel}
     ${resp}=        POST On Session     diwise      /ngsi-ld/v1/entities    json=${device}
 
     Status Should Be    201     ${resp}
@@ -49,7 +47,25 @@ Check That Update Entity Attributes Updates Values Correctly
     ${deviceValue}=     Get From Dictionary     ${resp.json()}     value
     ${value}=           Get From Dictionary     ${deviceValue}     value
 
-    Should Be Equal As Strings   ${value}     snow=25;t=12
+    Should Be Equal As Strings   snow=25;t=12  ${value}
+
+
+Check That On Off Values Can Be Handled
+    ${deviceID}=    Set Variable        urn:ngsi-ld:Device:${TEST_ID_PRFX}:livboj
+    ${device}=      Create Device       ${deviceID}  ${onOffModel}
+    ${resp}=        POST On Session     diwise      /ngsi-ld/v1/entities    json=${device}
+
+    Status Should Be    201     ${resp}
+    ${resp}=        Update Device Value  diwise  ${deviceID}  on
+
+    Status Should Be    204     ${resp}
+    
+    ${resp}=            GET On Session          diwise      /ngsi-ld/v1/entities/${deviceID}
+
+    ${deviceValue}=     Get From Dictionary     ${resp.json()}     value
+    ${value}=           Get From Dictionary     ${deviceValue}     value
+
+    Should Be Equal As Strings   ${value}     on
 
 
 Check Date Last Value Reported Updates Correctly
@@ -68,7 +84,7 @@ Check Date Last Value Reported Updates Correctly
 
 
 Get Device Model
-    ${deviceModelID}=  Set Variable     urn:ngsi-ld:DeviceModel:${TEST_ID_PRFX}:mymodel
+    ${deviceModelID}=  Set Variable     urn:ngsi-ld:DeviceModel:${TEST_ID_PRFX}:snowtemp
     ${resp}=           GET On Session      diwise    /ngsi-ld/v1/entities/${deviceModelID}
     Status Should Be   200     ${resp}
 
@@ -82,3 +98,15 @@ suite setup
 
     ${TEST_ID_PRFX}=  Generate Random String  8  [NUMBERS]abcdef
     Set Suite Variable  ${TEST_ID_PRFX}
+
+    ${modelID}=         Set Variable        urn:ngsi-ld:DeviceModel:${TEST_ID_PRFX}:snowtemp
+    ${snowTempModel}=   Create Device Model For Properties  ${modelID}  temperature  snowDepth
+    ${resp}=            POST On Session     diwise      /ngsi-ld/v1/entities    json=${snowTempModel}
+    Status Should Be    201  ${resp}
+    Set Suite Variable  ${snowTempModel}
+
+    ${modelID}=         Set Variable        urn:ngsi-ld:DeviceModel:${TEST_ID_PRFX}:onoff
+    ${onOffModel}=      Create Device Model For Properties  ${modelID}  state
+    ${resp}=            POST On Session     diwise      /ngsi-ld/v1/entities    json=${onOffModel}
+    Status Should Be    201  ${resp}
+    Set Suite Variable  ${onOffModel}

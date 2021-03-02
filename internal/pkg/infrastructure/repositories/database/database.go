@@ -136,6 +136,7 @@ func NewDatabaseConnection(connect ConnectorFunc, log logging.Logger) (Datastore
 
 	// Make sure that the controlled properties table is properly seeded
 	props := map[string]string{
+		"state":        "",
 		"fillingLevel": "l",
 		"snowDepth":    "snow",
 		"temperature":  "t",
@@ -303,7 +304,11 @@ func (db *myDB) GetDeviceFromID(id string) (*models.Device, error) {
 		for _, value := range deviceValues {
 			for _, controlledProperty := range db.controlledProperties {
 				if controlledProperty.ID == value.DeviceControlledPropertyID {
-					values = append(values, fmt.Sprintf("%s=%s", controlledProperty.Abbreviation, value.Value))
+					if len(controlledProperty.Abbreviation) > 0 {
+						values = append(values, fmt.Sprintf("%s=%s", controlledProperty.Abbreviation, value.Value))
+					} else {
+						values = append(values, value.Value)
+					}
 				}
 			}
 		}
@@ -379,13 +384,21 @@ func (db *myDB) UpdateDeviceValue(deviceID, value string) error {
 	}
 
 	// TODO: Check that all values are supported before starting to add them
-	// TODO: Figure out how to handle value = "on"
 	// TODO: Support a delta to not store too small changes
+
+	timeNow := time.Now().UTC()
 
 	for _, v := range strings.Split(value, ";") {
 		kv := strings.Split(v, "=")
 		if len(kv) != 2 {
-			return errors.New("Failed to split value in two")
+			// If the value can not be split around an equal sign
+			if isStateValue(v) {
+				// ... and the value is a state value. Then we create a new tuple manually to
+				// link the value to the "state" property
+				kv = []string{"", v}
+			} else {
+				return fmt.Errorf("Unable to store value %s. Failed to split value in two", v)
+			}
 		}
 
 		if ctrlPropMap[kv[0]] == 0 {
@@ -396,7 +409,7 @@ func (db *myDB) UpdateDeviceValue(deviceID, value string) error {
 			DeviceID:                   device.ID,
 			DeviceControlledPropertyID: ctrlPropMap[kv[0]],
 			Value:                      kv[1],
-			ObservedAt:                 time.Now().UTC(),
+			ObservedAt:                 timeNow,
 		}
 
 		result = db.impl.Create(deviceValue)
@@ -405,9 +418,13 @@ func (db *myDB) UpdateDeviceValue(deviceID, value string) error {
 		}
 	}
 
-	db.impl.Model(&models.Device{}).Where("id = ?", device.ID).Update("date_last_value_reported", time.Now().UTC())
+	db.impl.Model(&models.Device{}).Where("id = ?", device.ID).Update("date_last_value_reported", timeNow)
 
 	return nil
+}
+
+func isStateValue(value string) bool {
+	return (strings.Compare(value, "on") == 0 || strings.Compare(value, "off") == 0)
 }
 
 func (db *myDB) getControlledProperties(properties []string) ([]models.DeviceControlledProperty, error) {

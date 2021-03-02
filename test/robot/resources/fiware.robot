@@ -18,11 +18,11 @@ Create Device
     [Return]        ${device}
 
 
-Create Device Model
-    [Arguments]     ${id}
+Create Device Model For Properties
+    [Arguments]     ${id}  @{props}
     ${model}=       Create Fiware Entity   id=${id}   type=DeviceModel
     ${category}=    Create Text List Property  sensor
-    ${ctrlprops}=   Create Text List Property  temperature  snowDepth
+    ${ctrlprops}=   Create Text List Property  @{props}
     Set To Dictionary   ${model}    category  ${category}
     Set To Dictionary   ${model}    controlledProperty  ${ctrlprops}
     [Return]        ${model}
