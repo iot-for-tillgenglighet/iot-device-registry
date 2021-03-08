@@ -50,6 +50,12 @@ func (router *RequestRouter) addNGSIHandlers(contextRegistry ngsi.ContextRegistr
 	router.Post("/ngsi-ld/v1/entities", ngsi.NewCreateEntityHandler(contextRegistry))
 }
 
+func (router *RequestRouter) addProbeHandlers() {
+	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+}
+
 //Get accepts a pattern that should be routed to the handlerFn on a GET request
 func (router *RequestRouter) Get(pattern string, handlerFn http.HandlerFunc) {
 	router.impl.Get(pattern, handlerFn)
@@ -87,6 +93,7 @@ func createRequestRouter(contextRegistry ngsi.ContextRegistry) *RequestRouter {
 
 	router.addGraphQLHandlers()
 	router.addNGSIHandlers(contextRegistry)
+	router.addProbeHandlers()
 
 	return router
 }
