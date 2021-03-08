@@ -13,11 +13,11 @@ services:
       - rabbitmq
       - postgresdb
     environment:
-      DEVREG_DB_HOST: 'postgresdb'
-      DEVREG_DB_USER: 'testuser'
-      DEVREG_DB_NAME: 'devreg'
-      DEVREG_DB_PASSWORD: 'testpass'
-      DEVREG_DB_SSLMODE: 'disable'
+      DIWISE_SQLDB_HOST: 'postgresdb'
+      DIWISE_SQLDB_USER: 'testuser'
+      DIWISE_SQLDB_NAME: 'devreg'
+      DIWISE_SQLDB_PASSWORD: 'testpass'
+      DIWISE_SQLDB_SSLMODE: 'disable'
       SERVICE_PORT: '8686'
       RABBITMQ_HOST: 'rabbitmq'
     

@@ -78,11 +78,11 @@ type ConnectorFunc func() (*gorm.DB, error)
 
 //NewPostgreSQLConnector opens a connection to a postgresql database
 func NewPostgreSQLConnector(log logging.Logger) ConnectorFunc {
-	dbHost := os.Getenv("DEVREG_DB_HOST")
-	username := os.Getenv("DEVREG_DB_USER")
-	dbName := os.Getenv("DEVREG_DB_NAME")
-	password := os.Getenv("DEVREG_DB_PASSWORD")
-	sslMode := getEnv("DEVREG_DB_SSLMODE", "require")
+	dbHost := os.Getenv("DIWISE_SQLDB_HOST")
+	username := os.Getenv("DIWISE_SQLDB_USER")
+	dbName := os.Getenv("DIWISE_SQLDB_NAME")
+	password := os.Getenv("DIWISE_SQLDB_PASSWORD")
+	sslMode := getEnv("DIWISE_SQLDB_SSLMODE", "require")
 
 	dbURI := fmt.Sprintf("host=%s user=%s dbname=%s sslmode=%s password=%s", dbHost, username, dbName, sslMode, password)
 
