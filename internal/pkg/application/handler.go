@@ -288,14 +288,17 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Reques
 		return err
 	}
 
-	err = cs.db.UpdateDeviceValue(shortEntityID, updateSource.Value.Value)
+	value, err := url.QueryUnescape(updateSource.Value.Value)
 	if err == nil {
-		postWaterTempTelemetryIfDeviceIsAWaterTempDevice(
-			cs.messenger,
-			shortEntityID,
-			device.Latitude, device.Longitude,
-			updateSource.Value.Value,
-		)
+		err = cs.db.UpdateDeviceValue(shortEntityID, value)
+		if err == nil {
+			postWaterTempTelemetryIfDeviceIsAWaterTempDevice(
+				cs.messenger,
+				shortEntityID,
+				device.Latitude, device.Longitude,
+				value,
+			)
+		}
 	}
 
 	return err
