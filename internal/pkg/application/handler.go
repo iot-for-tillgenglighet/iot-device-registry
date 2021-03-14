@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
@@ -191,7 +192,9 @@ func (cs *contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntiti
 				}
 
 				if !device.DateLastValueReported.IsZero() {
-					fiwareDevice.DateLastValueReported = ngsitypes.CreateDateTimeProperty(device.DateLastValueReported.String())
+					fiwareDevice.DateLastValueReported = ngsitypes.CreateDateTimeProperty(
+						device.DateLastValueReported.Format(time.RFC3339),
+					)
 				}
 
 				err = callback(fiwareDevice)
@@ -248,7 +251,9 @@ func (cs *contextSource) RetrieveEntity(entityID string, req ngsi.Request) (ngsi
 
 		fiwareDevice.RefDeviceModel, _ = fiware.NewDeviceModelRelationship(deviceModel.DeviceModelID)
 		if !device.DateLastValueReported.IsZero() {
-			fiwareDevice.DateLastValueReported = ngsitypes.CreateDateTimeProperty(device.DateLastValueReported.String())
+			fiwareDevice.DateLastValueReported = ngsitypes.CreateDateTimeProperty(
+				device.DateLastValueReported.Format(time.RFC3339),
+			)
 		}
 
 		return fiwareDevice, nil
