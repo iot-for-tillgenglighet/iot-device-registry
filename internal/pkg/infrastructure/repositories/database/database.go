@@ -123,7 +123,7 @@ func NewDatabaseConnection(connect ConnectorFunc, log logging.Logger) (Datastore
 	}
 
 	db := &myDB{
-		impl: impl.Debug(),
+		impl: impl,
 	}
 
 	db.impl.AutoMigrate(&models.DeviceControlledProperty{})
@@ -324,6 +324,13 @@ func (db *myDB) GetDevices() ([]models.Device, error) {
 	result := db.impl.Find(&devices)
 	if result.Error != nil {
 		return nil, result.Error
+	}
+
+	for idx, d := range devices {
+		d, err := db.GetDeviceFromID(d.DeviceID)
+		if err == nil {
+			devices[idx] = *d
+		}
 	}
 
 	return devices, nil
