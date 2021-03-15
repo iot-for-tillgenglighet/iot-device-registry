@@ -299,7 +299,7 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Reques
 		err = cs.db.UpdateDeviceValue(shortEntityID, value)
 		if err == nil {
 			postWaterTempTelemetryIfDeviceIsAWaterTempDevice(
-				cs.messenger,
+				cs,
 				shortEntityID,
 				device.Latitude, device.Longitude,
 				value,
@@ -311,7 +311,7 @@ func (cs *contextSource) UpdateEntityAttributes(entityID string, req ngsi.Reques
 }
 
 //This is a hack to decode the value and send it as a telemetry message over RabbitMQ for PoC purposes.
-func postWaterTempTelemetryIfDeviceIsAWaterTempDevice(messenger MessagingContext, device string, lat, lon float64, value string) {
+func postWaterTempTelemetryIfDeviceIsAWaterTempDevice(cs *contextSource, device string, lat, lon float64, value string) {
 	if strings.Contains(device, "sk-elt-temp-") {
 		decodedValue, err := url.QueryUnescape(value)
 		if err != nil {
@@ -325,9 +325,19 @@ func postWaterTempTelemetryIfDeviceIsAWaterTempDevice(messenger MessagingContext
 				if parts[0] == "t" {
 					temp, err := strconv.ParseFloat(parts[1], 64)
 					if err == nil {
-						messenger.PublishOnTopic(
-							telemetry.NewWaterTemperatureTelemetry(temp, device, lat, lon),
-						)
+						// TODO: Make this configurable
+						const MinTemp float64 = -0.5
+						const MaxTemp float64 = 15.0
+						if temp >= MinTemp && temp <= MaxTemp {
+							cs.messenger.PublishOnTopic(
+								telemetry.NewWaterTemperatureTelemetry(temp, device, lat, lon),
+							)
+						} else {
+							cs.log.Infof(
+								"ignored water temp value from %s: %f not in allowed range [%f,%f]",
+								device, temp, MinTemp, MaxTemp,
+							)
+						}
 					}
 					return
 				}
