@@ -57,7 +57,7 @@ func GetFromContext(ctx context.Context) (Datastore, error) {
 		return db, nil
 	}
 
-	return nil, errors.New("Failed to decode database from context")
+	return nil, errors.New("failed to decode database from context")
 }
 
 type myDB struct {
@@ -193,7 +193,7 @@ func (db *myDB) CreateDevice(src *fiware.Device) (*models.Device, error) {
 
 	// TODO: Separate fiware.Device from the repository layer so that we do not
 	// have to deal with ID strings like this
-	if strings.HasPrefix(src.ID, fiware.DeviceIDPrefix) == false {
+	if !strings.HasPrefix(src.ID, fiware.DeviceIDPrefix) {
 		return nil, fmt.Errorf("device id %s must start with \"%s\"", src.ID, fiware.DeviceIDPrefix)
 	}
 
@@ -231,7 +231,7 @@ func (db *myDB) CreateDeviceModel(src *fiware.DeviceModel) (*models.DeviceModel,
 
 	// TODO: Separate fiware.DeviceModel from the repository layer so that we do not
 	// have to deal with ID strings like this
-	if strings.HasPrefix(src.ID, fiware.DeviceModelIDPrefix) == false {
+	if !strings.HasPrefix(src.ID, fiware.DeviceModelIDPrefix) {
 		return nil, fmt.Errorf("device id %s must start with \"%s\"", src.ID, fiware.DeviceModelIDPrefix)
 	}
 
@@ -239,16 +239,16 @@ func (db *myDB) CreateDeviceModel(src *fiware.DeviceModel) (*models.DeviceModel,
 	shortDeviceID := src.ID[len(fiware.DeviceModelIDPrefix):]
 
 	if src.ControlledProperty == nil {
-		return nil, fmt.Errorf("Creating device model is not allowed without controlled properties")
+		return nil, fmt.Errorf("creating device model is not allowed without controlled properties")
 	}
 
 	controlledProperties, err := db.getControlledProperties(src.ControlledProperty.Value)
 	if err != nil {
-		return nil, fmt.Errorf("Controlled property is not supported: %s", err.Error())
+		return nil, fmt.Errorf("controlled property is not supported: %s", err.Error())
 	}
 
 	if src.Category == nil {
-		return nil, fmt.Errorf("Creating device model is not allowed without a specified category")
+		return nil, fmt.Errorf("creating device model is not allowed without a specified category")
 	}
 
 	deviceModel := &models.DeviceModel{
@@ -372,7 +372,7 @@ func (db *myDB) UpdateDeviceValue(deviceID, value string) error {
 		return result.Error
 	} else if result.RowsAffected != 1 {
 		//TODO: We need error groups and introduce a NOT FOUND error here
-		return errors.New("Attempt to update non existing device")
+		return errors.New("attempt to update non existing device")
 	}
 
 	// Get the corresponding device model
@@ -381,7 +381,7 @@ func (db *myDB) UpdateDeviceValue(deviceID, value string) error {
 	if result.Error != nil {
 		return result.Error
 	} else if result.RowsAffected != 1 {
-		return fmt.Errorf("Failed to find corresponding device model for device %s", deviceID)
+		return fmt.Errorf("failed to find corresponding device model for device %s", deviceID)
 	}
 
 	// Build a lookup table for controlled property abbrevations to db primary keys
@@ -404,12 +404,12 @@ func (db *myDB) UpdateDeviceValue(deviceID, value string) error {
 				// link the value to the "state" property
 				kv = []string{"", v}
 			} else {
-				return fmt.Errorf("Unable to store value %s. Failed to split value in two", v)
+				return fmt.Errorf("unable to store value %s. Failed to split value in two", v)
 			}
 		}
 
 		if ctrlPropMap[kv[0]] == 0 {
-			return fmt.Errorf("Device does not support this controlled property: %s", kv[0])
+			return fmt.Errorf("device %s does not support this controlled property: %s", deviceID, kv[0])
 		}
 
 		deviceValue := &models.DeviceValue{
@@ -447,7 +447,7 @@ func (db *myDB) getControlledProperties(properties []string) ([]models.DeviceCon
 	}
 
 	if len(found) != len(properties) {
-		return nil, fmt.Errorf("Unable to find all controlled properties %v", properties)
+		return nil, fmt.Errorf("unable to find all controlled properties %v", properties)
 	}
 
 	return found, nil

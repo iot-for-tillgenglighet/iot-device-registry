@@ -114,7 +114,7 @@ func TestCreateDevice(t *testing.T) {
 
 			var err error
 			device := newDevice()
-			device.RefDeviceModel, err = fiware.NewDeviceModelRelationship(
+			device.RefDeviceModel, _ = fiware.NewDeviceModelRelationship(
 				fiware.DeviceModelIDPrefix + modelID,
 			)
 
@@ -140,7 +140,7 @@ func TestCreateDeviceModelForWaterTemperatureDevice(t *testing.T) {
 		}
 
 		device := fiware.NewDevice("badtemperatur", "18.5")
-		device.RefDeviceModel, err = fiware.NewDeviceModelRelationship(deviceModel.ID)
+		device.RefDeviceModel, _ = fiware.NewDeviceModelRelationship(deviceModel.ID)
 
 		_, err = db.CreateDevice(device)
 
