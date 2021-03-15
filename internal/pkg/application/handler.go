@@ -185,7 +185,7 @@ func (cs *contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntiti
 			}
 
 			for _, device := range devices {
-				fiwareDevice := fiware.NewDevice(device.DeviceID, device.Value)
+				fiwareDevice := fiware.NewDevice(device.DeviceID, url.QueryEscape(device.Value))
 				deviceModel, err := cs.db.GetDeviceModelFromPrimaryKey(device.DeviceModelID)
 				if err == nil {
 					fiwareDevice.RefDeviceModel, _ = fiware.NewDeviceModelRelationship(deviceModel.DeviceModelID)
@@ -243,7 +243,7 @@ func (cs *contextSource) RetrieveEntity(entityID string, req ngsi.Request) (ngsi
 			return nil, fmt.Errorf("no Device found with ID %s: %s", shortEntityID, err.Error())
 		}
 
-		fiwareDevice := fiware.NewDevice(device.DeviceID, device.Value)
+		fiwareDevice := fiware.NewDevice(device.DeviceID, url.QueryEscape(device.Value))
 		deviceModel, err := cs.db.GetDeviceModelFromPrimaryKey(device.DeviceModelID)
 		if err != nil {
 			return nil, fmt.Errorf("no valid DeviceModel found: %s", err.Error())
