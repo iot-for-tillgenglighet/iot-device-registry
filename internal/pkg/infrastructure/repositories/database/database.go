@@ -321,7 +321,7 @@ func (db *myDB) GetDeviceFromID(id string) (*models.Device, error) {
 
 func (db *myDB) GetDevices() ([]models.Device, error) {
 	devices := []models.Device{}
-	result := db.impl.Find(&devices)
+	result := db.impl.Order("device_id").Find(&devices)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -338,7 +338,7 @@ func (db *myDB) GetDevices() ([]models.Device, error) {
 
 func (db *myDB) GetDeviceModels() ([]models.DeviceModel, error) {
 	deviceModels := []models.DeviceModel{}
-	result := db.impl.Find(&deviceModels)
+	result := db.impl.Order("device_model_id").Find(&deviceModels)
 	if result.Error != nil {
 		return nil, result.Error
 	}
