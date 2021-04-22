@@ -158,8 +158,9 @@ func TestThatCreateDeviceModelFailsOnUnknownControlledProperty(t *testing.T) {
 		_, err := db.CreateDeviceModel(deviceModel)
 
 		errMsg := getErrorMessageOrString(err, "nil")
-		if strings.Compare(errMsg, "Controlled property is not supported: Unable to find all controlled properties [spaceship]") != 0 {
-			t.Error("CreateDeviceModelUnknownControlledProperty test failed:" + errMsg)
+		expectedError := "controlled property is not supported: unable to find all controlled properties [spaceship]"
+		if strings.Compare(errMsg, expectedError) != 0 {
+			t.Errorf("Returned error msg \"%s\" differs from expected \"%s\"", errMsg, expectedError)
 		}
 	}
 }
