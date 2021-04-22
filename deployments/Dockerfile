@@ -1,6 +1,5 @@
-FROM golang AS builder
+FROM golang:1.16 AS builder
 
-ENV GO111MODULE=on
 
 # Set the Current Working Directory inside the container
 WORKDIR /app
@@ -12,10 +11,11 @@ RUN go mod download
 
 COPY . .
 
+RUN go test -v ./...
 
 WORKDIR /app/cmd/iot-device-registry
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build
 
 FROM alpine
 
