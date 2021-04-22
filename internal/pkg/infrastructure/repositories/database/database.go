@@ -215,8 +215,8 @@ func (db *myDB) CreateDevice(src *fiware.Device) (*models.Device, error) {
 	}
 
 	if src.Location != nil {
-		device.Latitude = src.Location.Value.Coordinates[0]
-		device.Longitude = src.Location.Value.Coordinates[1]
+		device.Longitude = src.Location.Value.Coordinates[0]
+		device.Latitude = src.Location.Value.Coordinates[1]
 	}
 
 	result := db.impl.Create(device)
@@ -314,6 +314,13 @@ func (db *myDB) GetDeviceFromID(id string) (*models.Device, error) {
 		}
 
 		device.Value = strings.Join(values, ";")
+	}
+
+	// TODO: Remove this temporary quick fix after the erroneous seed data is fixed
+	if device.Longitude > device.Latitude {
+		swap := device.Latitude
+		device.Latitude = device.Longitude
+		device.Longitude = swap
 	}
 
 	return device, nil
