@@ -17,10 +17,14 @@ WORKDIR /app/cmd/iot-device-registry
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build
 
-FROM alpine
+FROM registry.access.redhat.com/ubi8/ubi-minimal
+WORKDIR /opt/diwise
 
-RUN apk add ca-certificates
+COPY --from=builder /app/cmd/iot-device-registry/iot-device-registry /opt/diwise/
 
-COPY --from=builder /app/cmd/iot-device-registry/iot-device-registry /app/
+RUN chmod 775 /opt/diwise
 
-ENTRYPOINT ["/app/iot-device-registry"]
+EXPOSE 8080
+USER 1001
+
+ENTRYPOINT ["/opt/diwise/iot-device-registry"]
