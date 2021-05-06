@@ -215,8 +215,9 @@ func (db *myDB) CreateDevice(src *fiware.Device) (*models.Device, error) {
 	}
 
 	if src.Location != nil {
-		device.Longitude = src.Location.Value.Coordinates[0]
-		device.Latitude = src.Location.Value.Coordinates[1]
+		pt := src.Location.Value.GetAsPoint()
+		device.Longitude = pt.Coordinates[0]
+		device.Latitude = pt.Coordinates[1]
 	}
 
 	result := db.impl.Create(device)
