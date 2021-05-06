@@ -17,6 +17,8 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+
+	temperaturecmds "github.com/iot-for-tillgenglighet/api-temperature/pkg/infrastructure/messaging/commands"
 	gql "github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/_presentation/api/graphql"
 	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/logging"
 	"github.com/iot-for-tillgenglighet/iot-device-registry/internal/pkg/infrastructure/repositories/database"
@@ -102,6 +104,7 @@ func createRequestRouter(contextRegistry ngsi.ContextRegistry) *RequestRouter {
 //MessagingContext is an interface that allows mocking of messaging.Context parameters
 type MessagingContext interface {
 	PublishOnTopic(message messaging.TopicMessage) error
+	SendCommandTo(command messaging.CommandMessage, key string) error
 }
 
 func createContextRegistry(log logging.Logger, messenger MessagingContext, db database.Datastore) ngsi.ContextRegistry {
@@ -334,9 +337,11 @@ func postWaterTempTelemetryIfDeviceIsAWaterTempDevice(cs *contextSource, device 
 						const MinTemp float64 = -0.5
 						const MaxTemp float64 = 28.0
 						if temp >= MinTemp && temp <= MaxTemp {
-							cs.messenger.PublishOnTopic(
-								telemetry.NewWaterTemperatureTelemetry(temp, device, lat, lon),
-							)
+							wtt := telemetry.NewWaterTemperatureTelemetry(temp, device, lat, lon)
+							storeTempCommand := &temperaturecmds.StoreWaterTemperatureUpdate{
+								WaterTemperature: *wtt,
+							}
+							cs.messenger.SendCommandTo(storeTempCommand, "api-temperature")
 						} else {
 							cs.log.Infof(
 								"ignored water temp value from %s: %f not in allowed range [%f,%f]",

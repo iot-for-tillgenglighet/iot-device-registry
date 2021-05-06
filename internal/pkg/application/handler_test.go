@@ -108,7 +108,7 @@ func TestThatCreateEntityFailsOnUnknownEntity(t *testing.T) {
 
 func TestThatPatchWaterTempDevicePublishesOnTheMessageQueue(t *testing.T) {
 	db := &dbMock{
-		deviceFromID: &models.Device{},
+		deviceFromID: &models.Device{Latitude: 64, Longitude: 17},
 	}
 	m := msgMock{}
 
@@ -120,8 +120,8 @@ func TestThatPatchWaterTempDevicePublishesOnTheMessageQueue(t *testing.T) {
 	ctxreg := createContextRegistry(log, &m, db)
 	ngsi.NewUpdateEntityAttributesHandler(ctxreg).ServeHTTP(w, req)
 
-	if m.PublishCount != 1 {
-		t.Error("Wrong publish count: ", m.PublishCount, "!=", 1)
+	if m.CommandCount != 1 {
+		t.Error("Wrong command count: ", m.CommandCount, "!=", 1)
 	}
 }
 
@@ -168,11 +168,15 @@ func createURL(path string, params ...string) string {
 }
 
 type msgMock struct {
-	PublishCount uint32
+	CommandCount uint32
 }
 
 func (m *msgMock) PublishOnTopic(message messaging.TopicMessage) error {
-	m.PublishCount++
+	return nil
+}
+
+func (m *msgMock) SendCommandTo(command messaging.CommandMessage, key string) error {
+	m.CommandCount++
 	return nil
 }
 
